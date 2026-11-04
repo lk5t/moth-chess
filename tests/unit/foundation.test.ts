@@ -163,3 +163,24 @@ describe('HUD placement', () => {
     expect(evalBarSide('left', board, 1400, 10)).toBe('left');
   });
 });
+
+describe('3.0.1 steady arrows', () => {
+  it('locks the arrow at the cap depth and keeps it until the position changes', async () => {
+    const { stableResult } = await import('@/components/useAnalysis');
+    const R = (fen: string, depth: number, move: string, complete = false) => ({ fen, depth, complete, searchId: 1, lines: [{ multipv: 1, depth, score: { type: 'cp', value: 10 }, whiteScore: { type: 'cp', value: 10 }, pv: [move], pvSan: [move] }] }) as never;
+    const F = 'fen-a', G = 'fen-b';
+    expect(stableResult(null, R(F, 9, 'e2e4'), F, 12)).toBeNull(); // too shallow: no arrow yet
+    const locked = stableResult(null, R(F, 12, 'd2d4'), F, 12);
+    expect((locked as { lines: { pv: string[] }[] }).lines[0].pv[0]).toBe('d2d4');
+    expect(stableResult(locked, R(F, 16, 'c2c4'), F, 12)).toBe(locked); // deeper search does not move it
+    expect(stableResult(locked, R(G, 3, 'g1f3'), G, 12)).toBeNull(); // new position: wait again
+    expect(stableResult(null, R(G, 4, 'g1f3', true), G, 12)).not.toBeNull(); // a finished shallow search counts
+  });
+  it('migrates 3.0 settings to one arrow, keeping other HUD choices', () => {
+    const m = migrateSettings({ ...DEFAULT_SETTINGS, settingsVersion: 3, hud: { ...DEFAULT_SETTINGS.hud, arrowCount: 3, evalBar: 'right' } });
+    expect(m.settings.hud.arrowCount).toBe(1);
+    expect(m.settings.hud.evalBar).toBe('right');
+    expect(m.settings.hud.stableArrow).toBe(true);
+    expect(migrateSettings({ ...DEFAULT_SETTINGS, settingsVersion: 3, hud: { ...DEFAULT_SETTINGS.hud, arrowCount: 2 } }).settings.hud.arrowCount).toBe(2);
+  });
+});

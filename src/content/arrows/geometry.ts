@@ -36,15 +36,15 @@ export function isKnightMove(from: Square, to: Square): boolean {
 
 /**
  * Closed SVG path for an arrow (shaft + head). Knight moves are drawn as an L (long leg first).
- * `width` is relative (1 = default ≈ 1/6 of a square).
+ * `width` is relative (1 = default ≈ 1/10 of a square — a slim shaft with a compact head).
  */
 export function arrowPath(from: Square, to: Square, size: number, orientation: Orientation, width = 1): string {
   const s = size / 8;
   const a = squareCenter(from, size, orientation);
   const b = squareCenter(to, size, orientation);
-  const shaft = (s / 6) * width;
-  const headW = shaft * 2.6;
-  const headL = shaft * 2.4;
+  const shaft = (s / 10) * width;
+  const headW = shaft * 3.4;
+  const headL = shaft * 3.1;
   const pts: { x: number; y: number }[] = [a];
   if (isKnightMove(from, to)) {
     const dx = b.x - a.x, dy = b.y - a.y;

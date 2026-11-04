@@ -94,7 +94,7 @@ export function arrowsFromResult(result: EngineResult | null, settings: Settings
   result.lines.slice(0, Math.max(0, Math.min(3, max))).forEach((l, i) => {
     const u = l.pv[0] && parseUci(l.pv[0]);
     if (!u) return;
-    out.push({ from: u.from as Square, to: u.to as Square, color: ARROW_COLORS[i], width: settings.visual.arrowWidth * (i === 0 ? 1.15 : 0.9), opacity: settings.visual.arrowOpacity * (i === 0 ? 1 : 0.8), rank: i });
+    out.push({ from: u.from as Square, to: u.to as Square, color: ARROW_COLORS[i], width: settings.visual.arrowWidth * (i === 0 ? 1 : 0.85), opacity: settings.visual.arrowOpacity * (i === 0 ? 1 : 0.7), rank: i });
   });
   return out;
 }
@@ -105,4 +105,23 @@ export function engineConfigFor(settings: Settings): EngineConfig {
   if (settings.engine.kind !== 'moth') return base;
   const style = settings.moth.style[0].toUpperCase() + settings.moth.style.slice(1);
   return { ...base, uci: { Style: style, EvalFile: settings.moth.model, OwnBook: 'false' } };
+}
+
+/**
+ * Steady arrows: the arrow is chosen once, when the search for this position first reaches `minDepth`
+ * (or finishes), and then kept until the position changes — so it never jumps between candidate moves
+ * while the engine keeps deepening. Pure, for testing; see useStableResult.
+ */
+export function stableResult(locked: EngineResult | null, result: EngineResult | null, fen: string | null, minDepth: number): EngineResult | null {
+  if (!fen) return null;
+  if (locked && locked.fen === fen) return locked;
+  if (result && result.fen === fen && result.lines.length && result.lines[0].pv.length && (result.complete || result.depth >= minDepth)) return result;
+  return null;
+}
+
+export function useStableResult(result: EngineResult | null, fen: string | null, minDepth: number, enabled: boolean): EngineResult | null {
+  const lock = useRef<EngineResult | null>(null);
+  if (!enabled) { lock.current = null; return result; }
+  lock.current = stableResult(lock.current, result, fen, minDepth);
+  return lock.current;
 }

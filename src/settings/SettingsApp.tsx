@@ -141,7 +141,9 @@ export function SettingsApp() {
                 <Select label="Panel layout" value={s.hud.layout} onChange={(v) => update({ hud: { layout: v } })} options={[{ value: 'full', label: 'Full — all sections' }, { value: 'compact', label: 'Compact — evaluation and best line only' }]} />
                 <div style={{ height: 8 }} />
                 <Select label="Evaluation bar" value={s.hud.evalBar} onChange={(v) => update({ hud: { evalBar: v } })} options={[{ value: 'left', label: 'Left of the board' }, { value: 'right', label: 'Right of the board' }, { value: 'off', label: 'Hidden' }]} />
-                <Slider label="Arrows on the page board" value={s.hud.arrowCount} min={0} max={3} format={(v) => (v ? `${v} line${v > 1 ? 's' : ''}` : 'none')} onChange={(v) => update({ hud: { arrowCount: v } })} />
+                <Slider label="Arrows" value={s.hud.arrowCount} min={0} max={3} format={(v) => (v === 1 ? 'best move only' : v ? `${v} lines` : 'none')} onChange={(v) => update({ hud: { arrowCount: v } })} />
+                <Toggle checked={s.hud.stableArrow} onChange={(v) => update({ hud: { stableArrow: v } })} label="Steady arrow" hint="Pick the move once the engine reaches the depth below, then keep it — the arrow no longer jumps while the engine thinks deeper." />
+                <Slider label="Arrow depth" value={s.hud.depthCap} min={LIMITS.depthCap[0]} max={LIMITS.depthCap[1]} onChange={(v) => update({ hud: { depthCap: v } })} hint="On websites the engine also stops here. Lower = faster and lighter, higher = stronger." />
                 <Toggle checked={s.hud.bestMoveSquares} onChange={(v) => update({ hud: { bestMoveSquares: v } })} label="Outline the best move's squares" />
                 <Toggle checked={s.hud.showPv} onChange={(v) => update({ hud: { showPv: v } })} label="Show the principal variation" />
                 <Toggle checked={s.hud.showStatus} onChange={(v) => update({ hud: { showStatus: v } })} label="Show engine and board status" />

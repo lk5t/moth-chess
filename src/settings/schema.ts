@@ -11,7 +11,7 @@ export type EvalBarSide = 'left' | 'right' | 'off';
 export type UiMode = 'simple' | 'full';
 
 /** Bumped whenever stored settings need a migration step (see migrateSettings). v2.0 data had no version → 2. */
-export const SETTINGS_VERSION = 3;
+export const SETTINGS_VERSION = 4;
 
 export interface Settings {
   settingsVersion: number;
@@ -19,7 +19,9 @@ export interface Settings {
   /** Performance profile; 'custom' once the user changes an engine resource by hand. */
   performance: { profile: ProfileId; debounceMs: number; idleSec: number };
   /** In-page analysis HUD on permitted analysis pages. */
-  hud: { layout: HudLayout; evalBar: EvalBarSide; bestMoveSquares: boolean; arrowCount: number; showPv: boolean; showStatus: boolean; avoidBoard: boolean };
+  hud: { layout: HudLayout; evalBar: EvalBarSide; bestMoveSquares: boolean; arrowCount: number; showPv: boolean; showStatus: boolean; avoidBoard: boolean;
+    /** stableArrow: draw the arrow once, when the search reaches depthCap, and keep it until the position changes */
+    stableArrow: boolean; depthCap: number };
   /** First-run setup. `completed` is the app version that finished onboarding ('' = never). */
   onboarding: { completed: string };
   /** Workspace layout. 'simple' = beginner mode: advanced tools and Engine Lab stay out of the way. */
@@ -43,7 +45,7 @@ export const DEFAULT_SETTINGS: Settings = {
   settingsVersion: SETTINGS_VERSION,
   enabled: true,
   performance: { profile: 'standard', debounceMs: 140, idleSec: 90 },
-  hud: { layout: 'full', evalBar: 'left', bestMoveSquares: true, arrowCount: 3, showPv: true, showStatus: true, avoidBoard: true },
+  hud: { layout: 'full', evalBar: 'left', bestMoveSquares: true, arrowCount: 1, showPv: true, showStatus: true, avoidBoard: true, stableArrow: true, depthCap: 14 },
   onboarding: { completed: '' },
   ui: { mode: 'simple', lastTab: 'home', tips: true },
   updates: { auto: true },
@@ -77,6 +79,7 @@ export const LIMITS = {
   debounceMs: [30, 1000],
   idleSec: [10, 600],
   arrowCount: [0, 3],
+  depthCap: [6, 24],
 } as const;
 
 const clamp = (v: unknown, [lo, hi]: readonly [number, number], d: number) => {
@@ -111,6 +114,8 @@ export function validateSettings(raw: unknown): Settings {
       showPv: bool(hu.showPv, d.hud.showPv),
       showStatus: bool(hu.showStatus, d.hud.showStatus),
       avoidBoard: bool(hu.avoidBoard, d.hud.avoidBoard),
+      stableArrow: bool(hu.stableArrow, d.hud.stableArrow),
+      depthCap: int(hu.depthCap, LIMITS.depthCap, d.hud.depthCap),
     },
     ui: {
       mode: oneOf((r.ui ?? {}).mode, ['simple', 'full'] as const, d.ui.mode),
@@ -212,6 +217,10 @@ export function migrateSettings(raw: unknown): MigrationResult {
     // people upgrading from 2.0 already know every tool: keep the full workspace for them
     next.ui = { mode: raw ? 'full' : 'simple', lastTab: 'analysis', tips: !raw };
     changed.push('HUD settings added', 'onboarding marked as seen (existing install)');
+  }
+  if (from === 3) {
+    // 3.0.1: one steady best-move arrow by default (3.0 showed three arrows that changed while the engine deepened)
+    if (r.hud?.arrowCount === 3) { next.hud = { ...r.hud, arrowCount: 1 }; changed.push('arrows: best move only'); }
   }
   const settings = validateSettings(next);
   if (corrupt) changed.push('stored settings were unreadable; defaults restored');

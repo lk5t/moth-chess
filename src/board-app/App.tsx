@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AppContext, type AppCtx, type TabId } from '@/components/AppContext';
 import { useSettings } from '@/settings/useSettings';
-import { useAnalysis, arrowsFromResult } from '@/components/useAnalysis';
+import { useAnalysis, arrowsFromResult, useStableResult } from '@/components/useAnalysis';
 import { useGame } from './useGame';
 import { Board } from '@/components/Board';
 import { EvalBar, LineChart } from '@/components/charts';
@@ -127,7 +127,9 @@ export function BoardApp() {
     try { return analyseThreats(game.fen, analysis.result); } catch { return null; }
   }, [settings.visual.threatVision, tab, game.fen, analysis.result]);
   const layers = useMemo(() => threatLayers(threats, settings.visual.threatLayers), [threats, settings.visual.threatLayers]);
-  const arrows = useMemo(() => [...arrowsFromResult(analysis.result, settings), ...layers.arrows], [analysis.result, settings, layers.arrows]);
+  // the analysis panel keeps deepening; the arrow is picked once at the cap depth and stays put
+  const arrowResult = useStableResult(analysis.result, game.fen, Math.min(settings.engine.depth, settings.hud.depthCap), settings.hud.stableArrow);
+  const arrows = useMemo(() => [...arrowsFromResult(arrowResult, settings, settings.hud.arrowCount), ...layers.arrows], [arrowResult, settings, layers.arrows]);
   // evaluation graph: the best-line score of every position on the move list that has been analysed
   const evalCache = useRef(new Map<string, number>());
   const [evalTick, setEvalTick] = useState(0);

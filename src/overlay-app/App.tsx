@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppContext, type AppCtx, type TabId } from '@/components/AppContext';
 import { useSettings } from '@/settings/useSettings';
 import { formatScore } from '@/engine/normalize';
-import { useAnalysis, arrowsFromResult } from '@/components/useAnalysis';
+import { useAnalysis, arrowsFromResult, useStableResult } from '@/components/useAnalysis';
 import { Tabs, EngineStatusBadge, Toggle, useThemeRoot } from '@/components/ui';
 import { AnalysisPanel } from '@/components/panels/AnalysisPanel';
 import { IntelligencePanel } from '@/components/panels/IntelligencePanel';
@@ -54,7 +54,9 @@ export function OverlayApp() {
   const fen = composed.fen && validateFen(composed.fen).ok ? validateFen(composed.fen).fen! : null;
   const fenError = composed.fen && !fen ? validateFen(composed.fen).error : null;
 
-  const analysis = useAnalysis(fen, settings, { enabled: supported && visible && settings.enabled && !!fen });
+  // on websites the search stops at the HUD depth cap: the best move is decided once and the arrow stays still
+  const analysis = useAnalysis(fen, settings, { enabled: supported && visible && settings.enabled && !!fen, depth: Math.min(settings.engine.depth, settings.hud.depthCap) });
+  const arrowResult = useStableResult(analysis.result, fen, Math.min(settings.engine.depth, settings.hud.depthCap), settings.hud.stableArrow);
   useEffect(() => {
     const t = () => (analysis.running ? analysis.stop() : analysis.start());
     window.addEventListener('moth-toggle-analysis', t);
@@ -69,8 +71,8 @@ export function OverlayApp() {
     const layers = threatLayers(threats, settings.visual.threatLayers);
     const top = analysis.result?.lines[0]?.whiteScore;
     const evalBar = settings.hud.evalBar !== 'off' && top ? { white: top.type === 'mate' ? (top.value > 0 || (top.value === 0 && top.winner === 'w') ? 1 : 0) : 1 / (1 + Math.pow(10, -top.value / 400)), label: formatScore(top) } : null;
-    portRef.current.postMessage({ type: 'draw', arrows: [...arrowsFromResult(analysis.result, settings, settings.hud.arrowCount), ...layers.arrows], highlights: settings.visual.squareHighlights ? layers.highlights : [], evalBar });
-  }, [analysis.result, settings, threats, supported, fen]);
+    portRef.current.postMessage({ type: 'draw', arrows: [...arrowsFromResult(arrowResult, settings, settings.hud.arrowCount), ...layers.arrows], highlights: settings.visual.squareHighlights ? layers.highlights : [], evalBar });
+  }, [analysis.result, arrowResult, settings, threats, supported, fen]);
 
   const toast = useCallback((m: string) => { setToastMsg(m); setTimeout(() => setToastMsg(null), 3200); }, []);
   const openFull = useCallback((o: { fen?: string; tab?: TabId }) => { chrome.runtime.sendMessage({ type: 'open-board', fen: o.fen, tab: o.tab }); }, []);
@@ -177,6 +179,7 @@ export function OverlayApp() {
                 {[0, 1, 2, 3].map((n) => <button key={n} aria-pressed={settings.hud.arrowCount === n} onClick={() => updateSettings({ hud: { arrowCount: n } })}>{n}</button>)}
               </div>
             </div>
+            <Toggle checked={settings.hud.stableArrow} onChange={(v) => updateSettings({ hud: { stableArrow: v } })} label={`Steady arrow (decided at depth ${settings.hud.depthCap})`} />
             <Toggle checked={settings.hud.bestMoveSquares} onChange={(v) => updateSettings({ hud: { bestMoveSquares: v } })} label="Outline best-move squares" />
             <Toggle checked={settings.hud.showPv} onChange={(v) => updateSettings({ hud: { showPv: v } })} label="Show principal variation" />
             <Toggle checked={settings.hud.showStatus} onChange={(v) => updateSettings({ hud: { showStatus: v } })} label="Show engine status" />

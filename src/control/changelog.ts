@@ -2,6 +2,11 @@
 export interface ChangelogEntry { version: string; date: string; title: string; items: string[] }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '3.0.1', date: '2026-11', title: 'Steady arrows', items: [
+    'The best-move arrow is decided once (at the arrow depth, default 14) and no longer jumps while the engine thinks deeper.',
+    'One arrow by default, and slimmer, cleaner arrows.',
+    'New settings: Steady arrow and Arrow depth.',
+  ] },
   { version: '3.0.0', date: '2026-11', title: 'Freedom (public beta)', items: [
     'Simpler workspace: Home, Analyze, Train, Library and Engine Lab, with advanced tools under “More tools” in Simple mode. New logo and design.',
     'Fair play reworked: analysis is now available on finished games, solved puzzles, lessons and the board editor, as well as analysis boards, studies and bot games. Live, rated and tournament play stays blocked, and the rest of MOTH works on every page.',

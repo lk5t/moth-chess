@@ -2,6 +2,12 @@
 
 All notable changes to MOTH Chess. MOTH Chess is free and in public beta.
 
+## 3.0.1 (2026-11)
+- **Steady arrow:** the best move is picked once, when the engine reaches the arrow depth (default 14), and stays until the position changes. It no longer jumps between moves while the engine keeps thinking. On websites the engine also stops at that depth.
+- **One arrow by default** (best move only). 3.0 installs that showed 3 arrows are switched to 1; other numbers you chose are kept.
+- **Slimmer, cleaner arrows** and subtler best-move square outlines.
+- New settings under Appearance → On-page analysis panel: *Steady arrow* and *Arrow depth*.
+
 ## 3.0.0 "Freedom" (2026-11)
 
 ### Interface

@@ -283,8 +283,8 @@ function start(site: SiteId, initialSettings: Settings) {
       const rect = document.createElementNS(NS, 'rect');
       rect.setAttribute('x', String(p.x + 1.5)); rect.setAttribute('y', String(p.y + 1.5));
       rect.setAttribute('width', String(size / 8 - 3)); rect.setAttribute('height', String(size / 8 - 3));
-      rect.setAttribute('fill', best.color); rect.setAttribute('fill-opacity', '0.18');
-      rect.setAttribute('stroke', best.color); rect.setAttribute('stroke-opacity', '0.8'); rect.setAttribute('stroke-width', '2');
+      rect.setAttribute('fill', best.color); rect.setAttribute('fill-opacity', '0.1');
+      rect.setAttribute('stroke', best.color); rect.setAttribute('stroke-opacity', '0.55'); rect.setAttribute('stroke-width', '1.5'); rect.setAttribute('rx', '3');
       svg.appendChild(rect);
     }
     // evaluation bar beside the board (White's winning chance), on the side of the board nearer White
