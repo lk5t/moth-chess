@@ -31,7 +31,10 @@ export function useAnalysis(fen: string | null, settings: Settings, opts: { enab
   const enabled = opts.enabled ?? true;
   const [visible, setVisible] = useState(typeof document === 'undefined' || document.visibilityState === 'visible');
 
-  useEffect(() => engine.onStatus((s, d) => { setStatus(s); setDetail(d); }), [engine]);
+  useEffect(() => {
+    const off = engine.onStatus((s, d) => { setStatus(s); setDetail(d); });
+    return () => { off(); };
+  }, [engine]);
   useEffect(() => { void engine.configure({ threads: settings.engine.threads, hashMb: settings.engine.hashMb }); }, [engine, settings.engine.threads, settings.engine.hashMb]);
   useEffect(() => {
     const on = () => setVisible(document.visibilityState === 'visible');

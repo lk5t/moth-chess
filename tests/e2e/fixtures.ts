@@ -2,8 +2,9 @@ import { test as base, chromium, type BrowserContext, type Worker } from '@playw
 import { resolve } from 'node:path';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { fileURLToPath } from 'node:url';
 
-const DIST = resolve(__dirname, '../../dist');
+const DIST = resolve(fileURLToPath(new URL('.', import.meta.url)), '../../dist');
 
 export const test = base.extend<{ context: BrowserContext; sw: Worker; extId: string; ext: (path: string) => string }>({
   // eslint-disable-next-line no-empty-pattern

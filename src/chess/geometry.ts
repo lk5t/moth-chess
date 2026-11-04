@@ -211,7 +211,8 @@ export function see(b: Board, t: number, attackerColor: Color): number {
   }
   if (!depth) return 0;
   for (let d = depth - 1; d > 0; d--) gains[d - 1] = -Math.max(-gains[d - 1], gains[d]);
-  return gains[0];
+  // the first capture is optional: a losing capture is simply not played
+  return Math.max(0, gains[0]);
 }
 
 export interface HangingPiece { square: Square; type: PieceType; color: Color; reason: 'undefended' | 'attacked-by-lesser' | 'loses-exchange'; gain: number }
@@ -228,7 +229,7 @@ export function hangingPieces(b: Board, color: Color): HangingPiece[] {
     if (gain <= 0) return;
     const def = attackersOf(b, i, color);
     const minAtk = Math.min(...atk.map((a) => PIECE_VALUE[b.sq[a]!.type] || 100));
-    out.push({ square: sqName(i), type: p.type, color, gain, reason: !def.length ? 'undefended' : minAtk < PIECE_VALUE[p.type] ? 'attacked-by-lesser' : 'loses-exchange' });
+    out.push({ square: sqName(i), type: p.type, color, gain, reason: minAtk < PIECE_VALUE[p.type] ? 'attacked-by-lesser' : !def.length ? 'undefended' : 'loses-exchange' });
   });
   return out;
 }

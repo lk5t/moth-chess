@@ -47,10 +47,13 @@ export function classifyPage(p: PageProbe): PageVerdict {
   const host = p.hostname.replace(/^www\./, '');
   const path = p.pathname || '/';
   if (host === 'lichess.org') {
-    for (const [re, reason] of LICHESS_BLOCKED_PATHS) if (re.test(path)) return { status: 'blocked', site: 'lichess', reason };
+    // Fail closed: DOM evidence of a live game blocks every Lichess page, including analysis URLs.
     for (const sel of LICHESS_LIVE_DOM) if (p.has(sel)) return { status: 'blocked', site: 'lichess', reason: 'Live-game elements (clocks) detected on this page' };
+    // Reserved Lichess routes are recognised before the game-ID patterns ("/analysis" is 8 characters long,
+    // exactly like a game ID).
     if (/^\/analysis(\/|$)/.test(path)) return { status: 'supported', site: 'lichess', context: 'analysis' };
     if (/^\/practice\//.test(path)) return { status: 'supported', site: 'lichess', context: 'practice' };
+    for (const [re, reason] of LICHESS_BLOCKED_PATHS) if (re.test(path)) return { status: 'blocked', site: 'lichess', reason };
     return { status: 'unsupported', reason: 'Only the Lichess analysis board and Practice are supported' };
   }
   if (host === 'chess.com') {

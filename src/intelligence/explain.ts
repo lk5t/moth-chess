@@ -5,7 +5,7 @@
 import type { Color, EngineLine, EngineResult, Square } from '@/types';
 import { computeFeatures, type PositionFeatures, type SideFeatures } from './features';
 import { analyseThreats, type ThreatReport } from '@/threat-vision/threats';
-import { applyMove, gameStatus, validateFen } from '@/chess/position';
+import { applyMove, gameStatus, uciLineToSan, validateFen } from '@/chess/position';
 import { describeScore, formatScore, toCp } from '@/engine/normalize';
 import { opposite, parseBoard, see, idx } from '@/chess/geometry';
 import type { DetailLevel } from '@/settings/schema';
@@ -158,19 +158,22 @@ export function explainPosition(fenIn: string, engine?: EngineResult | null, opt
     const top = engine!.lines[0];
     insights.unshift({ text: `${describeScore(top.whiteScore)} (Stockfish ${formatScore(top.whiteScore)} at depth ${top.depth}, White's perspective).`, source: 'engine', category: 'summary', weight: 9 });
     const bestCp = toCp(top.score);
+    // engine lines normally carry SAN; derive it from the position when they don't
+    const firstSan = (l: typeof top) => l.pvSan[0] ?? uciLineToSan(fen, [l.pv[0]]).san[0] ?? l.pv[0];
+    const topSan = firstSan(top);
     engine!.lines.forEach((l, i) => {
       if (!l.pv[0]) return;
       const delta = bestCp - toCp(l.score);
       const reasons = moveReasons(fen, l, features, threats);
       if (i > 0) {
         reasons.push({
-          text: delta <= 15 ? `Practically equal to ${top.pvSan[0]} according to the engine.` : `The engine rates it ${(delta / 100).toFixed(2)} pawns worse than ${top.pvSan[0]} (depth ${l.depth}).`,
+          text: delta <= 15 ? `Practically equal to ${topSan} according to the engine.` : `The engine rates it ${(delta / 100).toFixed(2)} pawns worse than ${topSan} (depth ${l.depth}).`,
           source: 'engine', category: 'comparison', weight: 2,
         });
       } else if (l.pvSan.length > 1) {
         reasons.push({ text: `Main line: ${l.pvSan.slice(0, 6).join(' ')}.`, source: 'engine', category: 'comparison', weight: 1 });
       }
-      candidates.push({ rank: i + 1, uci: l.pv[0], san: l.pvSan[0] ?? l.pv[0], evalText: formatScore(l.whiteScore), deltaFromBestCp: delta, engineDepth: l.depth, reasons });
+      candidates.push({ rank: i + 1, uci: l.pv[0], san: firstSan(l), evalText: formatScore(l.whiteScore), deltaFromBestCp: delta, engineDepth: l.depth, reasons });
     });
   }
 

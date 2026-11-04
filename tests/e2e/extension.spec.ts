@@ -62,13 +62,9 @@ test('every MOTH section opens on the built-in board', async ({ context, ext }) 
 });
 
 test('settings persist across reloads (chrome.storage.local)', async ({ context, ext, sw }) => {
-  const page = await context.newPage();
-  await page.goto(ext('options.html'));
-  await expect(page.getByRole('heading', { name: /Settings/ })).toBeVisible();
-  await page.evaluate(() => new Promise<void>((r) => chrome.storage.local.get('settings', (cur) => {
-    const key = Object.keys(cur)[0] ?? 'settings'; void key; r();
-  })));
-  // flip the popup's auto-analyse toggle, then read back from storage in the service worker
+  const options = await context.newPage();
+  await options.goto(ext('options.html'));
+  await expect(options.getByRole('heading', { name: /Settings/ })).toBeVisible();
   const popup = await context.newPage();
   await popup.goto(ext('popup.html'));
   const toggle = popup.getByRole('checkbox', { name: 'Move arrows' });

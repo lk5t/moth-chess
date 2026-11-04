@@ -4,9 +4,8 @@ import { checkExerciseMove, dailySession, detectMotifs, exercisesFromReview, sch
 import { computeDashboard, filterGames } from '@/dashboard/metrics';
 import { parsePgn, legalMoves } from '@/chess/position';
 import { toWhite } from '@/engine/normalize';
-import type { EngineResult, GameReview, SavedGame, WhiteScore, ExerciseAttempt } from '@/types';
+import type { EngineResult, GameReview, SavedGame, ExerciseAttempt } from '@/types';
 
-const cp = (v: number): WhiteScore => ({ type: 'cp', value: v, perspective: 'white' });
 
 // White blunders the queen on move 3 (Qh5?? Nxh5 is not possible… use a clean example): 1.e4 e5 2.Qh5 Nc6 3.Bc4 Nf6?? 4.Qxf7#
 const PGN = `[White "me"]\n[Black "opp"]\n[Result "1-0"]\n\n1. e4 e5 2. Qh5 Nc6 3. Bc4 Nf6 4. Qxf7# 1-0`;
