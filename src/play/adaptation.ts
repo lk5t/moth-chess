@@ -121,6 +121,23 @@ export async function analyseUserMoves(engine: StockfishEngine, uci: string[], u
 }
 const pieceValue = (p?: string) => ({ p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 } as Record<string, number>)[p ?? ''] ?? 0;
 
+/** Training advice from games against MOTH (personal adaptation). Requires ≥ 3 practice games. */
+export function practiceAdvice(p: Profile): string[] {
+  if (p.games < 3) return [];
+  const out: string[] = [];
+  const top = p.weaknesses[0];
+  const per = (t: string) => p.weaknesses.find((w) => w.tag === t)?.perGame ?? 0;
+  if (top) out.push(`Against MOTH you most often make: ${top.tag.replace(/-/g, ' ')} (${top.count}× in ${p.games} games).`);
+  if (per('hung-piece') >= 0.5) out.push('Before each move, check which of your pieces are undefended — practise the "hanging piece" exercises.');
+  if (per('missed-capture') + per('missed-mate') >= 0.5) out.push('You miss winning captures and mates: run tactical sessions (forks, pins, mates) from the Coach.');
+  const worst = (['opening', 'middlegame', 'endgame'] as const).reduce((a, b) => (p.phases[b] > p.phases[a] ? b : a), 'opening');
+  if (p.phases[worst] > 40) out.push(`Your largest average loss per move is in the ${worst} (${p.phases[worst].toFixed(0)} cp) — focus training there.`);
+  if (p.gambits.faced >= 2 && p.gambits.score < 0.4) out.push(`You score ${(p.gambits.score * 100).toFixed(0)}% against gambits — MOTH will keep testing you with sound gambits on Aggressive.`);
+  const weakOpening = p.openings.find((o) => o.games >= 2 && o.score <= 0.25);
+  if (weakOpening) out.push(`Weak line: ${weakOpening.name} as ${weakOpening.userColor === 'w' ? 'White' : 'Black'} (${(weakOpening.score * 100).toFixed(0)}% in ${weakOpening.games}). MOTH prepares it against you while learning is on.`);
+  return out;
+}
+
 export async function savePractice(g: PracticeGame): Promise<number> { return db().practice.add(g); }
 export async function practiceGames(): Promise<PracticeGame[]> { return db().practice.toArray(); }
 export async function deletePracticeHistory(): Promise<void> { await db().practice.clear(); }

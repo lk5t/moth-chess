@@ -8,6 +8,10 @@ import { queuedEvaluate } from '@/engine/queue';
 import { applyMove } from '@/chess/position';
 import { toCp } from '@/engine/normalize';
 import type { Color, ExerciseCategory, TrainingExercise } from '@/types';
+import { useLiveQuery } from '@/memory/useLiveQuery';
+import { buildProfile, practiceAdvice } from '@/play/adaptation';
+
+
 
 const CATS: { value: ExerciseCategory | 'all'; label: string }[] = [
   { value: 'all', label: 'All categories' }, { value: 'tactic', label: 'Tactics' }, { value: 'opening', label: 'Opening' }, { value: 'middlegame', label: 'Middlegame' },
@@ -150,6 +154,7 @@ export function CoachPanel({ compact }: { compact?: boolean }) {
               <ul style={{ margin: 0, paddingLeft: 18 }} className="stack small">{report.recommendations.map((r, i) => <li key={i}>{r}</li>)}</ul>
             </Card>
           )}
+          {settings.intelligence.coachingRecommendations && settings.moth.learning && <PracticeAdviceCard />}
           {!compact && (
             <div className="grid-2">
               <Card title="Mistakes by phase">
@@ -165,5 +170,16 @@ export function CoachPanel({ compact }: { compact?: boolean }) {
         </>
       )}
     </div>
+  );
+}
+
+function PracticeAdviceCard() {
+  const games = useLiveQuery(() => db().practice.toArray(), [], []);
+  const advice = useMemo(() => practiceAdvice(buildProfile(games ?? [])), [games]);
+  if (!advice.length) return null;
+  return (
+    <Card title="From your games against MOTH">
+      <ul style={{ margin: 0, paddingLeft: 18 }} className="stack small">{advice.map((r, i) => <li key={i}>{r}</li>)}</ul>
+    </Card>
   );
 }

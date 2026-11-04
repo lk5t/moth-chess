@@ -19,7 +19,7 @@ interface Bench {
   vsStockfish?: { movetimeMs: number; tactics: { moth: { solved: number; total: number }; stockfish: { solved: number; total: number } }; nps?: { moth: number; stockfish: number } };
   strength?: { method: string; estimateElo: number | null; ci95?: [number, number]; results: { opponent: string; elo: number; games: number; score: number }[] };
   tactics?: { budgetMs: number; solved: number; total: number; byTheme: Record<string, { solved: number; total: number }> };
-  styles?: { forcedWinsAgree: number; positions: number; checkRate: Record<string, number>; captureRate: Record<string, number> };
+  styles?: { forcedWinsAgree: number; mates?: number; positions: number; checkRate: Record<string, number>; captureRate: Record<string, number>; differentFromBalanced?: Record<string, number> };
   book?: { positions: number; moves: number; named: number; gambits: number; traps: number; mistakes: number; humanGames: number };
 }
 
@@ -58,8 +58,8 @@ export function LearningPanel() {
   }, [latency]);
 
   const activeId = settings.moth.model === 'builtin' ? registry?.active ?? 'classical' : settings.moth.model.startsWith('idb:') ? settings.moth.model.slice(4) : settings.moth.model;
-  const humanGames = registry?.models.reduce((a, m) => Math.max(a, (m.summary as { data?: { humanGames?: number } }).data?.humanGames ?? 0), 0) ?? 0;
-  const selfPlay = registry?.models.reduce((a, m) => a + ((m.summary as { data?: { selfPlayGames?: number } }).data?.selfPlayGames ?? 0), 0) ?? 0;
+  const humanGames = registry?.models.reduce((a, m) => Math.max(a, m.summary.data?.humanGames ?? 0), 0) ?? 0;
+  const selfPlay = registry?.models.reduce((a, m) => a + (m.summary.data?.selfPlayGames ?? 0), 0) ?? 0;
 
   const startLab = useCallback(async () => {
     const games = await db().games.toArray();
@@ -181,6 +181,13 @@ export function LearningPanel() {
               <table className="t"><tbody>{bench.strength.results.map((r) => <tr key={r.opponent}><td>{r.opponent}</td><td>{r.games} games</td><td>{(r.score * 100).toFixed(1)}%</td></tr>)}</tbody></table>
             </details>
           )}
+        </div>
+      )}
+
+      {bench?.styles && (
+        <div className="card">
+          <h3 style={{ marginTop: 0 }}>Playing styles</h3>
+          <div className="small">Measured on {bench.styles.positions} middlegame positions: Aggressive picks a different move than Balanced in {pct((bench.styles.differentFromBalanced?.aggressive ?? 0) * bench.styles.positions, bench.styles.positions)} of them, Defensive in {pct((bench.styles.differentFromBalanced?.defensive ?? 0) * bench.styles.positions, bench.styles.positions)}. All three styles found the forced mate in {bench.styles.forcedWinsAgree}/{bench.styles.mates ?? bench.styles.forcedWinsAgree} mate puzzles.</div>
         </div>
       )}
 

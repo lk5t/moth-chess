@@ -902,7 +902,15 @@ static int search(int alpha, int beta, int depth, int ply, bool pv, bool nullOk)
     int bonus = root ? root_bonus(m) : 0;
     bool givesCheck = in_check();
     int s;
-    if (legal == 1) s = -search(-beta + bonus, -alpha + bonus, depth - 1, ply + 1, pv, true) + bonus;
+    if (bonus) {
+      // style tie-break at the root: search with the shifted window, but if the move turns out to be
+      // decided (a mate either way) search it again without the bonus — styles never touch decided scores
+      int raw = -search(-beta + bonus, -alpha + bonus, depth - 1, ply + 1, pv, true);
+      if (aborted) { unmake_move(); return 0; }
+      if (iabs(raw) >= MATE_BOUND - MAX_PLY) s = -search(-beta, -alpha, depth - 1, ply + 1, pv, true);
+      else s = raw + bonus;
+    }
+    else if (legal == 1) s = -search(-beta, -alpha, depth - 1, ply + 1, pv, true);
     else {
       int r = 0;
       if (depth >= 3 && quiet && !check && !givesCheck && legal > 3) {
@@ -911,9 +919,9 @@ static int search(int alpha, int beta, int depth, int ply, bool pv, bool nullOk)
         if (r < 0) r = 0;
         if (r > depth - 2) r = depth - 2;
       }
-      s = -search(-alpha - 1 + bonus, -alpha + bonus, depth - 1 - r, ply + 1, false, true) + bonus;
-      if (s > alpha && r) s = -search(-alpha - 1 + bonus, -alpha + bonus, depth - 1, ply + 1, false, true) + bonus;
-      if (s > alpha && s < beta) s = -search(-beta + bonus, -alpha + bonus, depth - 1, ply + 1, true, true) + bonus;
+      s = -search(-alpha - 1, -alpha, depth - 1 - r, ply + 1, false, true);
+      if (s > alpha && r) s = -search(-alpha - 1, -alpha, depth - 1, ply + 1, false, true);
+      if (s > alpha && s < beta) s = -search(-beta, -alpha, depth - 1, ply + 1, true, true);
     }
     unmake_move();
     if (aborted) return 0;

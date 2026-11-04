@@ -121,6 +121,15 @@ describe('search', () => {
 });
 
 describe('styles', () => {
+  it('report correct mate scores in every style (mate-in-2 puzzles)', () => {
+    const fens = ['r2qkb1r/pp2nppp/3p4/2pNN1B1/2BnP3/3P4/PPP2PPP/R2bK2R w KQkq - 1 1', 'r1bq2rk/pp3pbp/2p1p1pQ/7P/3P4/2PB1N2/PP3PPR/2KR4 w - - 0 1'];
+    for (const s of ['aggressive', 'balanced', 'defensive'] as const) for (const f of fens) {
+      e.setStyle(s); e.newGame(); e.setFen(f);
+      const sc = e.uciScore(e.search({ nodes: 60000 }).lines[0].score);
+      expect(sc.type).toBe('mate'); expect(sc.value).toBeGreaterThan(0);
+    }
+    e.setStyle('balanced');
+  });
   const positions = [
     'r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4',
     'rnbqk2r/ppp1bppp/4pn2/3p4/2PP4/2N2N2/PP2PPPP/R1BQKB1R w KQkq - 4 5',
@@ -134,6 +143,8 @@ describe('styles', () => {
       e.setFen('6k1/5ppp/8/8/8/8/5PPP/3R2K1 w - - 0 1');
       const r = e.search({ movetimeMs: 300 });
       expect(r.bestMove).toBe('d1d8');
+      // the style bonus must never leak into a decided score
+      expect(e.uciScore(r.lines[0].score)).toEqual({ type: 'mate', value: 1 });
     }
     e.setStyle('balanced');
   });

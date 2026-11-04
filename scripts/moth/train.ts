@@ -151,7 +151,7 @@ meta.status = decision.promoted ? 'approved' : 'rejected';
 meta.decision = { ...decision, at: Date.now() };
 const file = `${id}.mothnn`;
 writeFileSync(new URL(file, MODELS), encodeModel(meta, net));
-const entry: RegistryEntry = { id, version, file, status: meta.status, parent: parentId, createdAt: meta.createdAt, summary: { valLoss: bestValLoss, valLossParent, match: stats, tactics: { solved: tacticsCand.solved, total: tacticsCand.total }, parentTactics: { solved: tacticsParent.solved, total: tacticsParent.total } }, reasons: decision.reasons };
+const entry: RegistryEntry = { id, version, file, status: meta.status, parent: parentId, createdAt: meta.createdAt, summary: { data: meta.data, valLoss: bestValLoss, valLossParent, match: stats, tactics: { solved: tacticsCand.solved, total: tacticsCand.total }, parentTactics: { solved: tacticsParent.solved, total: tacticsParent.total } }, reasons: decision.reasons };
 registry.models.push(entry);
 if (decision.promoted) {
   for (const m of registry.models) if (m.id === registry.active) m.status = 'retired';

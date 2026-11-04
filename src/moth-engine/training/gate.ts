@@ -9,7 +9,7 @@ export interface RegistryEntry {
   status: ModelStatus;
   parent: string;
   createdAt: number;
-  summary: { valLoss?: number; valLossParent?: number; match?: MatchResult; tactics?: { solved: number; total: number }; parentTactics?: { solved: number; total: number } };
+  summary: { data?: ModelMeta['data']; valLoss?: number; valLossParent?: number; match?: MatchResult; tactics?: { solved: number; total: number }; parentTactics?: { solved: number; total: number } };
   reasons: string[];
 }
 export interface Registry { format: 'moth-registry-1'; active: string | null; models: RegistryEntry[] }

@@ -1,0 +1,381 @@
+{
+ "generatedAt": "2026-11-04T07:28:30.114Z",
+ "machine": "Intel(R) Xeon(R) Processor @ 2.30GHz × 2, Node v22.23.4 (WebAssembly)",
+ "model": "moth-nn-2.0.4-1b724dd4",
+ "latency": {
+  "book (known openings)": {
+   "n": 80,
+   "mean": 6.817950175000007,
+   "p50": 1.313670000000002,
+   "p95": 46.225279,
+   "p99": 86.64873899999998,
+   "max": 86.64873899999998,
+   "target": "1–10 ms"
+  },
+  "opening, out of book": {
+   "n": 60,
+   "mean": 48.249444266666686,
+   "p50": 39.86127499999975,
+   "p95": 97.74006700000018,
+   "p99": 98.32806900000014,
+   "max": 98.32806900000014,
+   "target": "10–50 ms"
+  },
+  "middlegame": {
+   "n": 80,
+   "mean": 51.939333762499885,
+   "p50": 46.75158400000146,
+   "p95": 97.94146899999942,
+   "p99": 98.43486199999916,
+   "max": 98.43486199999916,
+   "target": "10–50 ms"
+  },
+  "endgame": {
+   "n": 60,
+   "mean": 41.219048799999804,
+   "p50": 35.223039000000426,
+   "p95": 80.88503700000001,
+   "p99": 98.24865099999988,
+   "max": 98.24865099999988,
+   "target": "10–50 ms"
+  },
+  "tactical (puzzles)": {
+   "n": 80,
+   "mean": 25.080467662500155,
+   "p50": 25.957329000000755,
+   "p95": 72.75576499999988,
+   "p99": 78.12130799999977,
+   "max": 78.12130799999977,
+   "target": "20–100 ms"
+  },
+  "cached": {
+   "n": 280,
+   "mean": 0.07335026428569336,
+   "p50": 0.0708680000007007,
+   "p95": 0.11069099999986065,
+   "p99": 0.15092100000038045,
+   "max": 0.3324510000002192,
+   "target": "1–5 ms"
+  }
+ },
+ "vsStockfish": {
+  "movetimeMs": 100,
+  "tactics": {
+   "moth": {
+    "solved": 225,
+    "total": 235
+   },
+   "stockfish": {
+    "solved": 235,
+    "total": 235
+   }
+  },
+  "nps": {
+   "moth": 1128563,
+   "stockfish": 1126591
+  }
+ },
+ "tactics": {
+  "budgetMs": 100,
+  "solved": 225,
+  "total": 235,
+  "byTheme": {
+   "kingsideAttack": {
+    "solved": 27,
+    "total": 29
+   },
+   "mate": {
+    "solved": 78,
+    "total": 78
+   },
+   "mateIn1": {
+    "solved": 23,
+    "total": 23
+   },
+   "oneMove": {
+    "solved": 23,
+    "total": 23
+   },
+   "opening": {
+    "solved": 14,
+    "total": 15
+   },
+   "middlegame": {
+    "solved": 120,
+    "total": 124
+   },
+   "smotheredMate": {
+    "solved": 12,
+    "total": 12
+   },
+   "cornerMate": {
+    "solved": 1,
+    "total": 1
+   },
+   "endgame": {
+    "solved": 91,
+    "total": 96
+   },
+   "master": {
+    "solved": 24,
+    "total": 26
+   },
+   "rookEndgame": {
+    "solved": 13,
+    "total": 14
+   },
+   "backRankMate": {
+    "solved": 16,
+    "total": 16
+   },
+   "queenRookEndgame": {
+    "solved": 2,
+    "total": 2
+   },
+   "hangingPiece": {
+    "solved": 14,
+    "total": 14
+   },
+   "queensideAttack": {
+    "solved": 13,
+    "total": 13
+   },
+   "advancedPawn": {
+    "solved": 18,
+    "total": 19
+   },
+   "queenEndgame": {
+    "solved": 1,
+    "total": 1
+   },
+   "mateIn2": {
+    "solved": 34,
+    "total": 34
+   },
+   "operaMate": {
+    "solved": 2,
+    "total": 2
+   },
+   "short": {
+    "solved": 95,
+    "total": 100
+   },
+   "morphysMate": {
+    "solved": 1,
+    "total": 1
+   },
+   "attraction": {
+    "solved": 17,
+    "total": 17
+   },
+   "promotion": {
+    "solved": 12,
+    "total": 12
+   },
+   "deflection": {
+    "solved": 13,
+    "total": 14
+   },
+   "fork": {
+    "solved": 30,
+    "total": 30
+   },
+   "pin": {
+    "solved": 16,
+    "total": 19
+   },
+   "pillsburysMate": {
+    "solved": 3,
+    "total": 3
+   },
+   "long": {
+    "solved": 82,
+    "total": 86
+   },
+   "mateIn3": {
+    "solved": 18,
+    "total": 18
+   },
+   "exposedKing": {
+    "solved": 20,
+    "total": 20
+   },
+   "sacrifice": {
+    "solved": 38,
+    "total": 40
+   },
+   "crushing": {
+    "solved": 79,
+    "total": 85
+   },
+   "discoveredAttack": {
+    "solved": 13,
+    "total": 13
+   },
+   "masterVsMaster": {
+    "solved": 4,
+    "total": 4
+   },
+   "advantage": {
+    "solved": 68,
+    "total": 72
+   },
+   "skewer": {
+    "solved": 12,
+    "total": 12
+   },
+   "veryLong": {
+    "solved": 25,
+    "total": 26
+   },
+   "discoveredCheck": {
+    "solved": 17,
+    "total": 17
+   },
+   "doubleCheck": {
+    "solved": 12,
+    "total": 12
+   },
+   "mateIn4": {
+    "solved": 3,
+    "total": 3
+   },
+   "quietMove": {
+    "solved": 14,
+    "total": 16
+   },
+   "clearance": {
+    "solved": 12,
+    "total": 12
+   },
+   "defensiveMove": {
+    "solved": 10,
+    "total": 13
+   },
+   "superGM": {
+    "solved": 1,
+    "total": 1
+   },
+   "attackingF2F7": {
+    "solved": 1,
+    "total": 1
+   },
+   "bishopEndgame": {
+    "solved": 4,
+    "total": 4
+   },
+   "interference": {
+    "solved": 2,
+    "total": 2
+   },
+   "intermezzo": {
+    "solved": 13,
+    "total": 14
+   },
+   "knightEndgame": {
+    "solved": 1,
+    "total": 1
+   },
+   "pawnEndgame": {
+    "solved": 1,
+    "total": 2
+   },
+   "trappedPiece": {
+    "solved": 12,
+    "total": 12
+   },
+   "zugzwang": {
+    "solved": 1,
+    "total": 1
+   },
+   "capturingDefender": {
+    "solved": 11,
+    "total": 12
+   },
+   "xRayAttack": {
+    "solved": 12,
+    "total": 12
+   }
+  }
+ },
+ "strength": {
+  "method": "Maximum-likelihood fit of 112 games (50 ms/move, single thread) against Stockfish 17.1 lite at fixed UCI_Elo levels. Stockfish's UCI_Elo is its own calibration, not FIDE or CCRL — treat this as a rough scale.",
+  "estimateElo": 2705,
+  "ci95": [
+   2590,
+   2815
+  ],
+  "results": [
+   {
+    "opponent": "Stockfish UCI_Elo 1350",
+    "elo": 1350,
+    "games": 16,
+    "score": 1
+   },
+   {
+    "opponent": "Stockfish UCI_Elo 1600",
+    "elo": 1600,
+    "games": 16,
+    "score": 1
+   },
+   {
+    "opponent": "Stockfish UCI_Elo 1850",
+    "elo": 1850,
+    "games": 16,
+    "score": 1
+   },
+   {
+    "opponent": "Stockfish UCI_Elo 2100",
+    "elo": 2100,
+    "games": 16,
+    "score": 0.9375
+   },
+   {
+    "opponent": "Stockfish UCI_Elo 2400",
+    "elo": 2400,
+    "games": 16,
+    "score": 0.875
+   },
+   {
+    "opponent": "Stockfish UCI_Elo 2700",
+    "elo": 2700,
+    "games": 16,
+    "score": 0.65625
+   },
+   {
+    "opponent": "Stockfish UCI_Elo 3000",
+    "elo": 3000,
+    "games": 16,
+    "score": 0
+   }
+  ]
+ },
+ "styles": {
+  "positions": 60,
+  "checkRate": {
+   "aggressive": 0.03333333333333333,
+   "balanced": 0.03333333333333333,
+   "defensive": 0.016666666666666666
+  },
+  "captureRate": {
+   "aggressive": 0.3,
+   "balanced": 0.3,
+   "defensive": 0.3
+  },
+  "forcedWinsAgree": 57,
+  "mates": 57,
+  "differentFromBalanced": {
+   "aggressive": 0.31666666666666665,
+   "defensive": 0.35
+  }
+ },
+ "book": {
+  "positions": 6606,
+  "moves": 10189,
+  "named": 4065,
+  "gambits": 1017,
+  "traps": 14,
+  "mistakes": 161,
+  "humanGames": 24000
+ }
+}

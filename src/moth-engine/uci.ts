@@ -264,7 +264,8 @@ export class MothUci {
 
       // 3. iterative deepening
       this.engine.beginSearch();
-      const hardDeadline = moveMode ? t0 + budget : 0;
+      // safety margin: the search checks the clock every 1024 nodes and the reply still has to be posted
+      const hardDeadline = moveMode ? t0 + Math.max(1, budget - Math.min(5, budget * 0.06)) : 0;
       const soft = budget * 0.45;
       let completedDepth = 0, lines: RawLine[] = [], stable = 0, lastBest = '';
       let slice = 120;

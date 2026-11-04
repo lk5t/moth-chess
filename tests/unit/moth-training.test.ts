@@ -11,7 +11,7 @@ import { decideCandidate, rollback, type Registry } from '@/moth-engine/training
 import { randomNetwork, rng, type ModelMeta } from '@/moth-engine/model';
 import { chooseBookMove, type BookPosition } from '@/moth-engine/book';
 import { verifyReading, replaySans, type BoardReading } from '@/content/adapters/adapters';
-import { buildProfile, preparation } from '@/play/adaptation';
+import { buildProfile, preparation, practiceAdvice } from '@/play/adaptation';
 import { latencyStats } from '@/play/client';
 import type { PracticeGame } from '@/memory/db';
 
@@ -192,6 +192,12 @@ describe('personal adaptation', () => {
     expect(p.asBlack.games).toBe(2);
     expect(p.asBlack.score).toBeCloseTo(0.5);
     expect(p.weaknesses[0].tag).toMatch(/blunder|hung-piece/);
+  });
+  it('turns the profile into training advice only with enough games', () => {
+    expect(practiceAdvice(buildProfile([pg({})]))).toEqual([]);
+    const adv = practiceAdvice(buildProfile([pg({}), pg({ at: 2 }), pg({ at: 3 })]));
+    expect(adv.join(' ')).toMatch(/hanging piece|blunder/);
+    expect(adv.join(' ')).toMatch(/Weak line: Sicilian Defense as Black/);
   });
   it('prepares the lines the user scores badly against (≥2 games, ≤40%)', () => {
     expect(preparation([pg({})])).toBe(''); // one game is not evidence
