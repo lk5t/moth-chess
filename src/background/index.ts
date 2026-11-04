@@ -2,8 +2,8 @@
 // pages), tab-scoped message relay between the content script and the overlay frame, commands, notifications.
 import { SITES, classifyUrl, siteForUrl, type SiteDef } from '@/content/detector/sites';
 import { PORT_CONTENT, PORT_OVERLAY, type RuntimeRequest, type TabStatus } from '@/utils/messages';
-import { loadSettings, SETTINGS_KEY } from '@/settings/store';
-import { DEFAULT_SETTINGS } from '@/settings/schema';
+import { loadSettings, migrateStoredSettings, SETTINGS_KEY } from '@/settings/store';
+import { logError } from '@/diagnostics/log';
 
 const scriptId = (s: SiteDef) => `moth-${s.id}`;
 
@@ -60,15 +60,20 @@ function broadcastTeardown(reason: string) {
 
 // ---------------- lifecycle ----------------
 
+// Settings are migrated in place (never reset) on install/update and at browser start-up, which also repairs
+// unreadable settings. Content-script registration failures are logged locally, not thrown away.
+async function safeSync() { try { await syncContentScripts(); } catch (e) { await logError('service worker', `content script registration failed: ${String((e as Error)?.message ?? e)}`); } }
 chrome.runtime.onInstalled.addListener(async (details) => {
-  const cur = await chrome.storage.local.get(SETTINGS_KEY);
-  if (!cur[SETTINGS_KEY]) await chrome.storage.local.set({ [SETTINGS_KEY]: DEFAULT_SETTINGS });
-  await syncContentScripts();
-  if (details.reason === 'install') chrome.tabs.create({ url: chrome.runtime.getURL('board.html?welcome=1') });
+  try {
+    const m = await migrateStoredSettings();
+    if (m.corrupt) await logError('settings', 'Stored settings were unreadable and were reset to defaults (the original was kept for diagnostics).');
+  } catch (e) { await logError('settings', `migration failed: ${String((e as Error)?.message ?? e)}`); }
+  await safeSync();
+  if (details.reason === 'install') chrome.tabs.create({ url: chrome.runtime.getURL('welcome.html') });
 });
-chrome.runtime.onStartup.addListener(() => { void syncContentScripts(); });
-chrome.permissions.onAdded.addListener(() => { void syncContentScripts(); });
-chrome.permissions.onRemoved.addListener(() => { void syncContentScripts(); broadcastTeardown('Site access was removed'); });
+chrome.runtime.onStartup.addListener(async () => { try { await migrateStoredSettings(); } catch { /* logged on next install */ } void safeSync(); });
+chrome.permissions.onAdded.addListener(() => { void safeSync(); });
+chrome.permissions.onRemoved.addListener(() => { void safeSync(); broadcastTeardown('Site access was removed'); });
 chrome.storage.onChanged.addListener(async (changes, area) => {
   if (area !== 'local' || !(SETTINGS_KEY in changes)) return;
   const was = changes[SETTINGS_KEY].oldValue?.enabled ?? true;

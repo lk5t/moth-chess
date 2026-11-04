@@ -178,3 +178,69 @@ describe('engine controller (scripted UCI engine)', () => {
     expect(fake.sent).toHaveLength(0);
   });
 });
+
+describe('engine recovery (v2.1)', () => {
+  it('stops after repeated consecutive crashes instead of looping, and retry() recovers', async () => {
+    let crashy = true;
+    const fakes: FakeEngine[] = [];
+    const e = new StockfishEngine(() => { const f = new FakeEngine({ stepMs: 5 }); fakes.push(f); return f; }, undefined, { idleMs: 0, restartBaseMs: 5, maxConsecutiveFailures: 3 });
+    const errors: [string, boolean][] = [];
+    e.onError((m, fatal) => errors.push([m, fatal]));
+    for (let i = 0; i < 3; i++) {
+      const h = e.analyse(START_FEN, { depth: 100, multiPv: 1 });
+      await wait(15);
+      if (crashy) fakes[fakes.length - 1].crash();
+      expect((await h.result).complete).toBe(false);
+    }
+    expect(e.getStatus()).toBe('error');
+    expect(e.lastError).toMatch(/3 times in a row/);
+    expect(errors.at(-1)?.[1]).toBe(true);
+    const spawned = fakes.length;
+    // further positions do not respawn the worker
+    expect((await e.analyse(START_FEN, { depth: 2, multiPv: 1 }).result).complete).toBe(false);
+    expect(fakes.length).toBe(spawned);
+    crashy = false;
+    e.retry();
+    expect((await e.analyse(START_FEN, { depth: 2, multiPv: 1 }).result).complete).toBe(true);
+    expect(e.consecutiveFailures).toBe(0);
+  });
+
+  it('resets the failure counter after a normal answer', async () => {
+    const fakes: FakeEngine[] = [];
+    const e = new StockfishEngine(() => { const f = new FakeEngine({ stepMs: 5 }); fakes.push(f); return f; }, undefined, { idleMs: 0, restartBaseMs: 5, maxConsecutiveFailures: 2 });
+    for (let i = 0; i < 4; i++) {
+      const h = e.analyse(START_FEN, { depth: 100, multiPv: 1 });
+      await wait(15);
+      fakes[fakes.length - 1].crash();
+      await h.result;
+      expect(e.consecutiveFailures).toBe(1);
+      expect((await e.analyse(START_FEN, { depth: 2, multiPv: 1 }).result).complete).toBe(true);
+      expect(e.consecutiveFailures).toBe(0);
+    }
+    expect(e.getStatus()).not.toBe('error');
+    expect(e.restarts).toBe(4);
+  });
+
+  it('fails fast with a clear message when engine files are missing (no restart loop)', async () => {
+    let spawned = 0;
+    const e = new StockfishEngine(() => {
+      spawned++;
+      const f = new FakeEngine();
+      const send = f.send.bind(f);
+      f.send = (c: string) => { if (c === 'uci') setTimeout(() => f.emit('info string fatal moth.wasm could not be loaded'), 0); else send(c); };
+      return f;
+    }, undefined, { idleMs: 0, initTimeoutMs: 500 });
+    e.engineName = 'MOTH Engine';
+    expect((await e.analyse(START_FEN, { depth: 2, multiPv: 1 }).result).complete).toBe(false);
+    expect(e.getStatus()).toBe('error');
+    expect(e.lastError).toMatch(/MOTH Engine files are missing or damaged/);
+    await e.analyse(START_FEN, { depth: 3, multiPv: 1 }).result;
+    expect(spawned).toBe(1);
+  });
+
+  it('explains common fatal errors in plain language', async () => {
+    const { explainEngineError } = await import('@/engine/engine');
+    expect(explainEngineError('Engine did not respond to the UCI handshake', 'Stockfish')).toMatch(/did not start in time/);
+    expect(explainEngineError('RangeError: out of memory', 'Stockfish')).toMatch(/Eco profile/);
+  });
+});

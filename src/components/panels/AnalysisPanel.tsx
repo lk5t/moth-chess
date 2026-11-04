@@ -40,7 +40,16 @@ export function AnalysisPanel() {
       </Card>
 
       <Card title="Engine suggestions" actions={<Toggle checked={explain} onChange={setExplain} label={<span className="small muted">Explain</span>} />}>
-        {analysis.status === 'error' && <div className="banner bad">{analysis.statusDetail ?? 'The engine failed to start.'}</div>}
+        {analysis.status === 'error' && (
+          <div className="banner bad" role="alert">
+            {analysis.statusDetail ?? 'The engine failed to start.'}
+            <div className="row" style={{ marginTop: 6, gap: 6 }}>
+              <button className="btn sm" onClick={analysis.retry}>Restart engine</button>
+              <button className="btn sm ghost" onClick={() => updateSettings({ engine: { kind: settings.engine.kind === 'moth' ? 'stockfish' : 'moth' } })}>Switch to {settings.engine.kind === 'moth' ? 'Stockfish' : 'MOTH Engine'}</button>
+            </div>
+          </div>
+        )}
+        {analysis.warnings.length > 0 && analysis.status !== 'error' && <div className="banner warn small">{analysis.warnings[0]}</div>}
         {!r?.lines.length && !status.over && <div className="empty">{analysis.running ? 'Waiting for the first engine result…' : 'Press Start to analyse this position.'}</div>}
         {status.over && <div className="empty">Game over — no moves to suggest.</div>}
         {r?.lines.map((l, i) => {
@@ -50,7 +59,7 @@ export function AnalysisPanel() {
               title="Click to play the first move on the board" onClick={() => l.pv[0] && play(l.pv[0])} onKeyDown={(e) => e.key === 'Enter' && l.pv[0] && play(l.pv[0])}>
               <span className="score">{formatScore(l.whiteScore)}</span>
               <div>
-                <div className="pv"><b>{l.pvSan[0]}</b> {l.pvSan.slice(1, 10).join(' ')}</div>
+                <div className="pv"><b>{l.pvSan[0]}</b> {surface === 'overlay' && !settings.hud.showPv ? '' : l.pvSan.slice(1, 10).join(' ')}</div>
                 {cand && cand.reasons[0] && <div className="small muted" style={{ marginTop: 2 }}>{cand.reasons.slice(0, 2).map((x) => x.text).join(' ')}</div>}
                 <div className="small muted">d{l.depth}{l.bound ? ` (${l.bound} bound)` : ''}{l.nps ? ` · ${(l.nps / 1000).toFixed(0)} kN/s` : ''}</div>
               </div>

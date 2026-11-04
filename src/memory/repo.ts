@@ -274,6 +274,20 @@ export async function importAll(json: string): Promise<RestoreReport> {
       if (await d.annotations.where('positionKey').equals(rest.positionKey).count()) { bump(skipped, 'annotations'); continue; }
       await d.annotations.add(rest); bump(inserted, 'annotations');
     }
+    // v3 tables (MOTH Engine): practice games, latency samples, training runs. Exported since 2.0 but not
+    // re-imported before 2.1. Duplicates are recognised by timestamp (+ distinguishing field).
+    for (const p of (parsed.data.practice ?? []) as any[]) {
+      const { id, ...rest } = p; void id;
+      if (typeof rest.at !== 'number' || (await d.practice.where('at').equals(rest.at).count())) { bump(skipped, 'practice'); continue; }
+      await d.practice.add({ ...rest, gameId: rest.gameId ? gameIdMap.get(rest.gameId) : undefined }); bump(inserted, 'practice');
+    }
+    for (const t of ['latency', 'runs'] as const) {
+      for (const r of (parsed.data[t] ?? []) as any[]) {
+        const { id, ...rest } = r; void id;
+        if (typeof rest.at !== 'number' || (await (d as any)[t].where('at').equals(rest.at).count())) { bump(skipped, t); continue; }
+        await (d as any)[t].add(rest); bump(inserted, t);
+      }
+    }
     for (const t of ['sessions', 'trees', 'simulations'] as const) {
       for (const r of (parsed.data[t] ?? []) as any[]) {
         const { id, ...rest } = r; void id;

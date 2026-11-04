@@ -5,7 +5,7 @@
 import { classifyPage, siteById, type PageVerdict, type SiteId } from './detector/sites';
 import { ADAPTERS, type BoardReading } from './adapters/adapters';
 import { arrowPath, squareCenter, squareOrigin } from './arrows/geometry';
-import { clampToViewport, defaultOverlayState, dragTo, resizeTo, BAR_H, MINI_W, type OverlayState } from './overlay/layout';
+import { clampToViewport, defaultOverlayState, dragTo, resizeTo, placeAvoiding, evalBarSide, BAR_H, MINI_W, type OverlayState, type Rect } from './overlay/layout';
 import { PORT_CONTENT, type Highlight } from '@/utils/messages';
 import type { Arrow } from '@/types';
 import { loadSettings, subscribeSettings } from '@/settings/store';
@@ -47,19 +47,19 @@ function start(site: SiteId, initialSettings: Settings) {
       :host { all: initial; }
       .layer { position: fixed; pointer-events: none; overflow: visible; }
       .frame { position: fixed; pointer-events: auto; display: flex; flex-direction: column; border-radius: 14px; overflow: hidden;
-        background: #121118; border: 1px solid rgba(139,123,255,.45); box-shadow: 0 12px 40px rgba(0,0,0,.45), 0 0 0 1px rgba(0,0,0,.4), 0 0 24px rgba(139,123,255,.18);
-        font: 12px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif; color: #e9e6f5; transition: opacity .15s; }
+        background: #15141f; border: 1px solid rgba(155,135,255,.38); box-shadow: 0 16px 44px rgba(0,0,0,.45), 0 0 0 1px rgba(0,0,0,.4);
+        font: 12px/1.2 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; color: #eeebfb; transition: opacity .15s; }
       .frame.hidden { display: none; }
       .bar { height: ${BAR_H}px; flex: 0 0 ${BAR_H}px; display: flex; align-items: center; gap: 8px; padding: 0 6px 0 10px; cursor: grab; user-select: none;
-        background: linear-gradient(180deg, #1d1b27, #16151d); border-bottom: 1px solid rgba(139,123,255,.25); }
+        background: #100f19; border-bottom: 1px solid #24223a; }
       .bar.dragging { cursor: grabbing; }
       .bar img { width: 18px; height: 18px; }
-      .title { font-weight: 650; letter-spacing: .02em; flex: 1; white-space: nowrap; }
-      .title small { font-weight: 400; color: #9d97b8; margin-left: 6px; }
+      .title { font-weight: 800; letter-spacing: .12em; flex: 1; white-space: nowrap; }
+      .title small { font-weight: 500; letter-spacing: .02em; color: #8a84a8; margin-left: 8px; }
       .btn { all: unset; width: 24px; height: 24px; border-radius: 7px; display: grid; place-items: center; cursor: pointer; color: #b9b3d6; font-size: 15px; }
       .btn:hover { background: rgba(139,123,255,.18); color: #fff; }
       .btn:focus-visible { outline: 2px solid #8b7bff; }
-      iframe { flex: 1; border: 0; width: 100%; background: #121118; color-scheme: normal; }
+      iframe { flex: 1; border: 0; width: 100%; background: #15141f; color-scheme: normal; }
       .frame.min iframe, .frame.min .resize { display: none; }
       .frame.dragging iframe { pointer-events: none; }
       .resize { position: absolute; right: 0; bottom: 0; width: 16px; height: 16px; cursor: nwse-resize;
@@ -68,8 +68,9 @@ function start(site: SiteId, initialSettings: Settings) {
     <svg class="layer" xmlns="http://www.w3.org/2000/svg"></svg>
     <div class="frame" role="dialog" aria-label="MOTH Chess analysis overlay">
       <div class="bar" title="Drag to move">
-        <img alt="" src="${chrome.runtime.getURL('icons/icon32.png')}">
-        <div class="title">MOTH Chess<small>analysis</small></div>
+        <img alt="" src="${chrome.runtime.getURL('icons/moth.svg')}">
+        <div class="title">MOTH<small>analysis · beta</small></div>
+        <button class="btn" data-act="dock" aria-label="Place beside the board" title="Place beside the board">⇆</button>
         <button class="btn" data-act="min" aria-label="Minimise" title="Minimise">–</button>
         <button class="btn" data-act="close" aria-label="Close overlay" title="Close (Alt+Shift+M to reopen)">×</button>
       </div>
@@ -109,6 +110,7 @@ function start(site: SiteId, initialSettings: Settings) {
     if (r[STATE_KEY]) state = { ...state, ...r[STATE_KEY], hidden: !settings.board.autoOverlay, minimized: settings.general.startMinimized || !!r[STATE_KEY].minimized };
     else state = { ...state, hidden: !settings.board.autoOverlay };
     applyState();
+    autoPlace();
   });
   applyState();
 
@@ -116,6 +118,7 @@ function start(site: SiteId, initialSettings: Settings) {
     const act = (e.target as HTMLElement).closest('[data-act]')?.getAttribute('data-act');
     if (act === 'min') { state.minimized = !state.minimized; applyState(); persist(); }
     if (act === 'close') { state.hidden = true; applyState(); persist(); }
+    if (act === 'dock') { state.userPlaced = false; autoPlace(true); persist(); }
   };
   bar.addEventListener('click', onBtn);
 
@@ -126,10 +129,13 @@ function start(site: SiteId, initialSettings: Settings) {
     frame.classList.add('dragging'); bar.classList.add('dragging');
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
     const move = (ev: PointerEvent) => {
+      if (Math.abs(ev.clientX - s0.px) + Math.abs(ev.clientY - s0.py) > 3) moved = true;
       state = mode === 'drag' ? dragTo(state, s0, ev.clientX, ev.clientY, innerWidth, innerHeight) : resizeTo(state, s0, ev.clientX, ev.clientY, innerWidth, innerHeight);
       applyState();
     };
+    let moved = false;
     const up = () => {
+      if (moved) state.userPlaced = true;
       frame.classList.remove('dragging'); bar.classList.remove('dragging');
       window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up);
       persist();
@@ -139,7 +145,14 @@ function start(site: SiteId, initialSettings: Settings) {
   };
   bar.addEventListener('pointerdown', startPointer('drag'));
   resizer.addEventListener('pointerdown', startPointer('resize'));
-  const onResize = () => { applyState(); scheduleLayer(); };
+  // keep the panel off the board and the site's own controls until the user places it themselves
+  const rectOf = (el: Element): Rect => { const r = el.getBoundingClientRect(); return { left: r.left, top: r.top, width: r.width, height: r.height }; };
+  const autoPlace = (force = false) => {
+    if (!boardEl || state.hidden || (!force && (state.userPlaced || !settings.hud.avoidBoard))) return;
+    const next = placeAvoiding(state, rectOf(boardEl), (adapter.avoid?.(document) ?? []).map(rectOf), innerWidth, innerHeight, { keepIfClear: !force });
+    if (next.x !== state.x || next.y !== state.y) { state = next; applyState(); }
+  };
+  const onResize = () => { applyState(); autoPlace(); scheduleLayer(); };
   window.addEventListener('resize', onResize);
   cleanups.push(() => window.removeEventListener('resize', onResize));
 
@@ -158,7 +171,7 @@ function start(site: SiteId, initialSettings: Settings) {
   const offSettings = subscribeSettings((s) => {
     settings = s;
     if (!s.enabled) teardown('MOTH Chess was disabled');
-    else applyState();
+    else { applyState(); autoPlace(); drawLayer(); }
   });
   cleanups.push(offSettings);
 
@@ -182,14 +195,27 @@ function start(site: SiteId, initialSettings: Settings) {
     const el = adapter.findBoard(document);
     if (el === boardEl) return;
     mo?.disconnect(); ro?.disconnect();
+    const replaced = !!boardEl;
     boardEl = el;
-    if (!el) return;
+    if (!el) { reading = null; drawLayer(); return; }
     mo = new MutationObserver(onBoardChange);
     mo.observe(el, { subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'style'] });
+    // orientation / size classes that live on wrappers (e.g. Lichess .cg-wrap.orientation-black)
+    for (const t of adapter.watchTargets?.(el) ?? []) mo.observe(t, { attributes: true, attributeFilter: ['class', 'style'] });
     ro = new ResizeObserver(() => { scheduleLayer(); onBoardChange(); });
     ro.observe(el);
+    if (replaced) console.info('[MOTH Chess] board replaced by the page — reattached');
+    autoPlace();
   };
-  cleanups.push(() => { mo?.disconnect(); ro?.disconnect(); clearTimeout(debounce); });
+  // boards that load late or are replaced by single-page navigation: react to DOM insertions (cheap check)
+  let attachTimer: ReturnType<typeof setTimeout> | undefined;
+  const docObserver = new MutationObserver(() => {
+    if (boardEl && boardEl.isConnected) return;
+    clearTimeout(attachTimer);
+    attachTimer = setTimeout(() => { lastSent = ''; publishBoard(); }, 150);
+  });
+  docObserver.observe(document.documentElement, { childList: true, subtree: true });
+  cleanups.push(() => { mo?.disconnect(); ro?.disconnect(); docObserver.disconnect(); clearTimeout(debounce); clearTimeout(attachTimer); });
 
   // ---------- arrow / highlight layer ----------
   let raf = 0;
@@ -216,7 +242,7 @@ function start(site: SiteId, initialSettings: Settings) {
     if (!size) return;
     const o = reading.orientation;
     // best move (engine line 1 = rank 0): outline its start and destination squares
-    const best = arrows.find((a) => a.rank === 0);
+    const best = settings.hud.bestMoveSquares ? arrows.find((a) => a.rank === 0) : undefined;
     if (best) for (const sq of [best.from, best.to]) {
       const p = squareOrigin(sq, size, o);
       const rect = document.createElementNS(NS, 'rect');
@@ -227,8 +253,11 @@ function start(site: SiteId, initialSettings: Settings) {
       svg.appendChild(rect);
     }
     // evaluation bar beside the board (White's winning chance), on the side of the board nearer White
-    if (evalBar) {
-      const w = Math.max(6, Math.round(size / 48)), x = -w - 4;
+    let barSide: 'left' | 'right' | null = null;
+    if (evalBar && settings.hud.evalBar !== 'off') {
+      const w = Math.max(6, Math.round(size / 48));
+      barSide = evalBarSide(settings.hud.evalBar, rectOf(boardEl), innerWidth, w);
+      const x = barSide === 'left' ? -w - 4 : size + 4;
       const whiteH = size * Math.max(0, Math.min(1, evalBar.white));
       const bg = document.createElementNS(NS, 'rect');
       bg.setAttribute('x', String(x)); bg.setAttribute('y', '0'); bg.setAttribute('width', String(w)); bg.setAttribute('height', String(size));
@@ -261,7 +290,9 @@ function start(site: SiteId, initialSettings: Settings) {
       board: { x: Math.round(br.left * 10) / 10, y: Math.round(br.top * 10) / 10, size: Math.round(size * 10) / 10, orientation: o },
       layer: { x: parseFloat(svg.style.left), y: parseFloat(svg.style.top) },
       arrows: arrows.map((a) => { const f = squareCenter(a.from, size, o), t = squareCenter(a.to, size, o); return { from: a.from, to: a.to, rank: a.rank, x1: f.x + br.left, y1: f.y + br.top, x2: t.x + br.left, y2: t.y + br.top }; }),
-      evalBar: evalBar?.label ?? null,
+      evalBar: barSide ? evalBar?.label ?? null : null,
+      evalBarSide: barSide,
+      panel: { x: state.x, y: state.y, w: state.minimized ? MINI_W : state.w, h: state.minimized ? BAR_H : state.h, hidden: state.hidden, userPlaced: !!state.userPlaced },
     }));
   };
 
@@ -274,6 +305,17 @@ function start(site: SiteId, initialSettings: Settings) {
     if (!boardEl || !boardEl.isConnected) publishBoard();
   }, 800);
   cleanups.push(() => clearInterval(watchdog));
+  // single-page navigation: re-check fair play and the board immediately instead of waiting for the poll
+  const nav = (window as any).navigation as EventTarget | undefined;
+  const onNav = () => setTimeout(() => {
+    const v: PageVerdict = classifyPage(probe());
+    if (v.status !== 'supported') { send({ type: 'page', verdict: v }); teardown(v.reason); return; }
+    send({ type: 'page', verdict: v });
+    lastPath = location.pathname; lastSent = ''; publishBoard();
+  }, 50);
+  nav?.addEventListener('navigatesuccess', onNav);
+  window.addEventListener('popstate', onNav);
+  cleanups.push(() => { nav?.removeEventListener('navigatesuccess', onNav); window.removeEventListener('popstate', onNav); });
   const onVis = () => { if (document.visibilityState === 'visible') publishBoard(); };
   document.addEventListener('visibilitychange', onVis);
   cleanups.push(() => document.removeEventListener('visibilitychange', onVis));

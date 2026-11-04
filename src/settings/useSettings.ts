@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { DEFAULT_SETTINGS, mergeSettings, type Settings, type SettingsPatch } from './schema';
+import { withProfileTracking } from './profiles';
 import { loadSettings, saveSettings, subscribeSettings } from './store';
 
 export function useSettings(): [Settings, (p: SettingsPatch) => Promise<void>, boolean] {
@@ -13,7 +14,7 @@ export function useSettings(): [Settings, (p: SettingsPatch) => Promise<void>, b
   }, []);
   // optimistic: controls reflect the change immediately; storage is the source of truth afterwards
   const update = useCallback(async (p: SettingsPatch) => {
-    setS((cur) => mergeSettings(cur, p));
+    setS((cur) => mergeSettings(cur, withProfileTracking(cur, p, mergeSettings)));
     setS(await saveSettings(p));
   }, []);
   return [s, update, loaded];

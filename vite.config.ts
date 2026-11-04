@@ -25,6 +25,8 @@ export default defineConfig({
         options: resolve(__dirname, 'options.html'),
         board: resolve(__dirname, 'board.html'),
         overlay: resolve(__dirname, 'overlay.html'),
+        control: resolve(__dirname, 'control.html'),
+        welcome: resolve(__dirname, 'welcome.html'),
       },
     },
   },

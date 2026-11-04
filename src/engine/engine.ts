@@ -20,6 +20,18 @@ export interface EngineOptions {
   stallTimeoutMs?: number; // restart if a running search produces no output for this long
   cacheSize?: number;
   updateIntervalMs?: number;
+  /** Crash recovery: first restart delay (doubles per consecutive failure, capped at 8 s). */
+  restartBaseMs?: number;
+  /** Consecutive crashes/stalls tolerated before the engine stops retrying until the user asks. */
+  maxConsecutiveFailures?: number;
+}
+
+/** Plain-language explanation for a fatal engine message (shown in the UI and the error log). */
+export function explainEngineError(raw: string, engineName: string): string {
+  if (/moth\.wasm|wasm could not be loaded|CompileError|WebAssembly/i.test(raw)) return `${engineName} files are missing or damaged (${raw}). Switch to the other engine in Settings, or reinstall the extension.`;
+  if (/handshake/i.test(raw)) return `${engineName} did not start in time. Your device may be busy — use “Restart engine”, or choose the Eco profile.`;
+  if (/memory|alloc|RangeError/i.test(raw)) return `${engineName} ran out of memory. Choose a smaller hash (Eco profile) and restart the engine.`;
+  return raw;
 }
 
 export interface AnalysisHandle {
@@ -67,13 +79,32 @@ export class StockfishEngine {
   engineName = 'Stockfish';
   options = new Map<string, UciOption>();
   restarts = 0;
+  /** crashes/stalls since the last search that finished normally */
+  consecutiveFailures = 0;
   lastError?: string;
+  /** non-fatal engine warnings, e.g. a missing network file (MOTH then uses its classical evaluation) */
+  warnings: string[] = [];
+  private restartTimer: ReturnType<typeof setTimeout> | null = null;
+  private initReject: ((e: Error) => void) | null = null;
+  private errorListeners = new Set<(message: string, fatal: boolean) => void>();
 
   constructor(private factory: TransportFactory, private config: EngineConfig = { threads: 1, hashMb: 64 }, private opts: EngineOptions = {}) {
     this.cache = new LruCache(opts.cacheSize ?? 300);
   }
 
   getStatus() { return this.status; }
+  /** Every crash, stall and fatal error (for the local diagnostics log). */
+  onError(l: (message: string, fatal: boolean) => void) { this.errorListeners.add(l); return () => this.errorListeners.delete(l); }
+  /** Idle shutdown delay; changed by performance profiles. */
+  setIdleMs(ms: number) { this.opts.idleMs = ms; if (this.idleTimer) this.armIdle(); }
+  /** User-initiated recovery after the engine gave up: clears the failure counter and starts fresh. */
+  retry() {
+    this.consecutiveFailures = 0;
+    if (this.restartTimer) { clearTimeout(this.restartTimer); this.restartTimer = null; }
+    this.killTransport();
+    this.setStatus('idle', 'Engine reset');
+    if (this.pending) this.startPending();
+  }
   /** `info string …` lines (MOTH reports book moves, cache hits and move latency this way). */
   onInfoString(l: StringListener) { this.stringListeners.add(l); return () => this.stringListeners.delete(l); }
   private optionsTag() { return JSON.stringify(this.config.uci ?? {}); }
@@ -94,7 +125,7 @@ export class StockfishEngine {
         t = this.factory();
       } catch (e) {
         this.ready = null;
-        this.fail(`Engine could not start: ${(e as Error).message}`);
+        this.fail(explainEngineError(`Engine could not start: ${(e as Error).message}`, this.engineName));
         reject(e);
         return;
       }
@@ -103,8 +134,9 @@ export class StockfishEngine {
       t.onLine((raw) => { if (gen === this.generation) String(raw).split('\n').forEach((l) => l.trim() && this.handleLine(l.trim())); });
       t.onError((err) => { if (gen === this.generation) this.recover(`Engine crashed: ${String((err as Error)?.message ?? err)}`); });
       const timeout = setTimeout(() => {
+        this.initReject = null;
         this.ready = null;
-        this.fail('Engine did not respond to the UCI handshake');
+        this.fail(explainEngineError('Engine did not respond to the UCI handshake', this.engineName));
         reject(new Error('UCI handshake timeout'));
       }, this.opts.initTimeoutMs ?? 20000);
       this.waitFor((l) => l === 'uciok')
@@ -115,9 +147,11 @@ export class StockfishEngine {
         })
         .then(() => {
           clearTimeout(timeout);
+          this.initReject = null;
           this.setStatus('ready');
           resolve();
         });
+      this.initReject = (e) => { clearTimeout(timeout); this.initReject = null; reject(e); };
       t.send('uci');
     });
     return this.ready;
@@ -211,12 +245,15 @@ export class StockfishEngine {
     if (this.current || !this.pending) return;
     const s = this.pending;
     this.pending = null;
+    // stopped engines stay stopped until retry(): no silent respawn on every new position
+    if (this.status === 'error') { this.finish(s, false); return; }
+    if (this.restartTimer) { clearTimeout(this.restartTimer); this.restartTimer = null; }
     this.current = s;
     try {
       await this.init();
     } catch {
       this.finish(s, false);
-      this.current = null;
+      if (this.current === s) this.current = null;
       return;
     }
     if (this.current !== s) return; // replaced while initialising
@@ -237,7 +274,12 @@ export class StockfishEngine {
   private handleLine(line: string) {
     if (this.stallTimer) this.armStall();
     if (line.startsWith('id name ')) this.engineName = line.slice(8);
-    else if (line.startsWith('info string ')) { const txt = line.slice(12); this.stringListeners.forEach((l) => l(txt)); }
+    else if (line.startsWith('info string ')) {
+      const txt = line.slice(12);
+      this.stringListeners.forEach((l) => l(txt));
+      if (txt.startsWith('fatal ')) { this.fail(explainEngineError(txt.slice(6), this.engineName)); return; }
+      if (txt.startsWith('init warning ')) { const w = txt.slice(13); if (!this.warnings.includes(w)) this.warnings.push(w); this.errorListeners.forEach((l) => l(`warning: ${w}`, false)); }
+    }
     else if (line.startsWith('option name ')) { const o = parseOption(line); if (o) this.options.set(o.name, o); }
     for (let i = 0; i < this.lineWaiters.length; i++) {
       if (this.lineWaiters[i].test(line)) {
@@ -283,6 +325,7 @@ export class StockfishEngine {
       this.clearStall();
       const complete = !s.stopped;
       const r = this.finish(s, complete, bm.bestMove ?? undefined, bm.ponder);
+      this.consecutiveFailures = 0; // a normal answer proves the engine is healthy again
       if (complete && r.lines.length) this.cache.set(`${positionKey(s.fen)}|${s.opts.multiPv}|${this.optionsTag()}`, r);
       this.current = null;
       this.setStatus('ready');
@@ -318,23 +361,46 @@ export class StockfishEngine {
   }
   private clearIdle() { if (this.idleTimer) { clearTimeout(this.idleTimer); this.idleTimer = null; } }
 
-  /** Crash/stall recovery: kill transport, resolve the running search as incomplete, restart for queued work. */
+  /**
+   * Crash/stall recovery: kill transport, resolve the running search as incomplete, then restart queued work
+   * after an exponential backoff. After `maxConsecutiveFailures` in a row it stops retrying (no restart loops,
+   * no CPU burn) until the user presses “Restart engine” (retry()) or a page reload.
+   */
   private recover(reason: string) {
     this.lastError = reason;
     this.restarts++;
+    this.consecutiveFailures++;
+    this.errorListeners.forEach((l) => l(reason, false));
     const cur = this.current;
     this.killTransport();
-    this.setStatus('restarting', reason);
     if (cur) this.finish(cur, false);
     this.current = null;
-    if (this.restarts > 5) { this.fail('Engine failed repeatedly; analysis disabled until reload'); return; }
-    if (this.pending) this.startPending();
-    else this.setStatus('idle', reason);
+    const max = this.opts.maxConsecutiveFailures ?? 4;
+    if (this.consecutiveFailures >= max) {
+      this.fail(`${this.engineName} crashed ${this.consecutiveFailures} times in a row and was stopped to save CPU. Use “Restart engine”, or switch engines in Settings.`);
+      return;
+    }
+    const delay = Math.min(8000, (this.opts.restartBaseMs ?? 300) * 2 ** (this.consecutiveFailures - 1));
+    this.setStatus('restarting', `${reason} — retrying in ${(delay / 1000).toFixed(1)} s`);
+    if (this.restartTimer) clearTimeout(this.restartTimer);
+    this.restartTimer = setTimeout(() => {
+      this.restartTimer = null;
+      if (this.status !== 'restarting') return;
+      if (this.pending) this.startPending();
+      else this.setStatus('idle', reason);
+    }, delay);
   }
 
   private fail(reason: string) {
     this.lastError = reason;
+    const rej = this.initReject;
+    this.initReject = null;
+    rej?.(new Error(reason));
+    const cur = this.current;
     this.killTransport();
+    if (cur) { this.finish(cur, false); this.current = null; }
+    if (this.pending) { this.finish(this.pending, false); this.pending = null; }
+    this.errorListeners.forEach((l) => l(reason, true));
     this.setStatus('error', reason);
   }
 

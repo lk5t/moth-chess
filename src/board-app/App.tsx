@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { AppContext, type AppCtx, type TabId } from '@/components/AppContext';
 import { useSettings } from '@/settings/useSettings';
 import { useAnalysis, arrowsFromResult } from '@/components/useAnalysis';
@@ -25,20 +25,21 @@ import { START_FEN, validateFen } from '@/chess/position';
 import type { NeuralTree, Orientation } from '@/types';
 import { recogniseOpening } from '@/openings/eco';
 
-const NAV: { id: TabId; label: string; icon: ReactNode }[] = [
-  { id: 'analysis', label: 'Analysis', icon: Icon.board },
-  { id: 'intelligence', label: 'MOTH Intelligence', icon: Icon.brain },
-  { id: 'threats', label: 'Threat Vision', icon: Icon.shield },
-  { id: 'neural', label: 'Neural Map', icon: Icon.map },
-  { id: 'whatif', label: 'What-If Simulator', icon: Icon.flask },
-  { id: 'review', label: 'Game Review', icon: Icon.review },
-  { id: 'openings', label: 'Openings', icon: Icon.book },
-  { id: 'coach', label: 'MOTH Coach', icon: Icon.coach },
-  { id: 'memory', label: 'Memory', icon: Icon.memory },
-  { id: 'dashboard', label: 'Dashboard', icon: Icon.chart },
-  { id: 'play', label: 'Play MOTH', icon: Icon.play },
-  { id: 'engine', label: 'MOTH Engine', icon: Icon.engine },
+const NAV: { id: TabId; label: string; icon: ReactNode; group: string }[] = [
+  { id: 'analysis', label: 'Analysis', icon: Icon.board, group: 'Analyze' },
+  { id: 'intelligence', label: 'MOTH Intelligence', icon: Icon.brain, group: 'Analyze' },
+  { id: 'threats', label: 'Threat Vision', icon: Icon.shield, group: 'Analyze' },
+  { id: 'neural', label: 'Neural Map', icon: Icon.map, group: 'Analyze' },
+  { id: 'whatif', label: 'What-If Simulator', icon: Icon.flask, group: 'Analyze' },
+  { id: 'play', label: 'Play MOTH', icon: Icon.play, group: 'Train' },
+  { id: 'coach', label: 'MOTH Coach', icon: Icon.coach, group: 'Train' },
+  { id: 'review', label: 'Game Review', icon: Icon.review, group: 'Train' },
+  { id: 'openings', label: 'Openings', icon: Icon.book, group: 'Train' },
+  { id: 'memory', label: 'Memory', icon: Icon.memory, group: 'Library' },
+  { id: 'dashboard', label: 'Dashboard', icon: Icon.chart, group: 'Library' },
+  { id: 'engine', label: 'MOTH Engine', icon: Icon.engine, group: 'Engine' },
 ];
+const openPage = (page: string) => (typeof chrome !== 'undefined' && chrome.runtime?.getURL ? open(chrome.runtime.getURL(page), '_blank') : open(page, '_blank'));
 
 export function BoardApp() {
   const params = useMemo(() => new URLSearchParams(location.search), []);
@@ -125,16 +126,20 @@ export function BoardApp() {
     <AppContext.Provider value={ctx}>
       <div className="app neural-bg">
         <nav className="rail" aria-label="MOTH sections">
-          <img src="icons/icon48.png" alt="MOTH Chess" />
+          <div className="brand"><img src="icons/moth.svg" alt="" /><span className="word">MOTH<small>Chess · public beta</small></span></div>
           {NAV.map((n, i) => (
-            <button key={n.id} aria-current={tab === n.id ? 'page' : undefined} onClick={() => setTab(n.id)} title={`${n.label}${i < 9 ? ` (Alt+${i + 1})` : ''}`} aria-label={n.label}>{n.icon}</button>
+            <Fragment key={n.id}>
+              {(i === 0 || NAV[i - 1].group !== n.group) && <div className="nav-group">{n.group}</div>}
+              <button aria-current={tab === n.id ? 'page' : undefined} onClick={() => setTab(n.id)} title={`${n.label}${i < 9 ? ` (Alt+${i + 1})` : ''}`} aria-label={n.label}>{n.icon}<span className="lbl">{n.label}</span></button>
+            </Fragment>
           ))}
           <span className="spacer" />
-          <button onClick={() => (typeof chrome !== 'undefined' && chrome.runtime?.openOptionsPage ? chrome.runtime.openOptionsPage() : open('options.html'))} title="Settings" aria-label="Settings">{Icon.gear}</button>
+          <button onClick={() => openPage('control.html')} title="Control Center" aria-label="Control Center">{Icon.home}<span className="lbl">Control Center</span></button>
+          <button onClick={() => (typeof chrome !== 'undefined' && chrome.runtime?.openOptionsPage ? chrome.runtime.openOptionsPage() : open('options.html'))} title="Settings" aria-label="Settings">{Icon.gear}<span className="lbl">Settings</span></button>
         </nav>
         {tab === 'play' ? (
           <main className="main" style={{ display: 'block' }}>
-            <div className="page-head" style={{ marginBottom: 12 }}><h1>MOTH Chess</h1><span className="badge">Play MOTH</span></div>
+            <div className="page-head" style={{ marginBottom: 12 }}><h1>Play MOTH</h1><span className="badge">Play MOTH</span></div>
             <PlayView />
           </main>
         ) : (

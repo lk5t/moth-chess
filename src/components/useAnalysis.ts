@@ -6,6 +6,10 @@ import type { Settings } from '@/settings/schema';
 import type { EngineConfig } from '@/types';
 import { ARROW_COLORS } from '@/content/arrows/geometry';
 import { parseUci, validateFen } from '@/chess/position';
+import { logError } from '@/diagnostics/log';
+
+// one error-log subscription per engine instance (several components may share an engine)
+const logged = new WeakSet<object>();
 
 export interface AnalysisState {
   result: EngineResult | null;
@@ -15,7 +19,10 @@ export interface AnalysisState {
   start(): void;
   stop(): void;
   reanalyse(): void;
+  /** restart an engine that stopped after repeated failures */
+  retry(): void;
   engineName: string;
+  warnings: string[];
 }
 
 /**
@@ -35,8 +42,12 @@ export function useAnalysis(fen: string | null, settings: Settings, opts: { enab
 
   useEffect(() => {
     const off = engine.onStatus((s, d) => { setStatus(s); setDetail(d); });
+    if (!logged.has(engine)) { logged.add(engine); engine.onError((m, fatal) => { void logError(`${engine.engineName}${fatal ? ' (fatal)' : ''}`, m).catch(() => {}); }); }
     return () => { off(); };
   }, [engine]);
+  const idleMs = settings.performance.idleSec * 1000;
+  useEffect(() => { engine.setIdleMs(idleMs); }, [engine, idleMs]);
+  const debounceMs = settings.performance.debounceMs;
   const cfgKey = JSON.stringify(cfg);
   useEffect(() => { void engine.configure(cfg); }, [engine, cfgKey]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -62,21 +73,22 @@ export function useAnalysis(fen: string | null, settings: Settings, opts: { enab
       });
       searchRef.current = h.searchId;
       h.result.then((r) => { if (searchRef.current === h.searchId) setResult(r); }).catch(() => {});
-    }, 140);
+    }, debounceMs);
     return () => { clearTimeout(t); if (searchRef.current !== null) { engine.cancel(searchRef.current); searchRef.current = null; } };
-  }, [fen, running, enabled, visible, depth, multiPv, moveTimeMs, nonce, engine]);
+  }, [fen, running, enabled, visible, depth, multiPv, moveTimeMs, nonce, engine, debounceMs]);
 
   const start = useCallback(() => setRunning(true), []);
   const stop = useCallback(() => { setRunning(false); engine.stop(); }, [engine]);
   const reanalyse = useCallback(() => { engine.clearCache(); setRunning(true); setNonce((n) => n + 1); }, [engine]);
+  const retry = useCallback(() => { engine.retry(); setRunning(true); setNonce((n) => n + 1); }, [engine]);
 
-  return { result: result && result.fen === fen ? result : null, status, statusDetail: detail, running, start, stop, reanalyse, engineName: engine.engineName };
+  return { result: result && result.fen === fen ? result : null, status, statusDetail: detail, running, start, stop, reanalyse, retry, engineName: engine.engineName, warnings: engine.warnings };
 }
 
-export function arrowsFromResult(result: EngineResult | null, settings: Settings): Arrow[] {
+export function arrowsFromResult(result: EngineResult | null, settings: Settings, max = 3): Arrow[] {
   if (!result || !settings.visual.arrows) return [];
   const out: Arrow[] = [];
-  result.lines.slice(0, 3).forEach((l, i) => {
+  result.lines.slice(0, Math.max(0, Math.min(3, max))).forEach((l, i) => {
     const u = l.pv[0] && parseUci(l.pv[0]);
     if (!u) return;
     out.push({ from: u.from as Square, to: u.to as Square, color: ARROW_COLORS[i], width: settings.visual.arrowWidth * (i === 0 ? 1.15 : 0.9), opacity: settings.visual.arrowOpacity * (i === 0 ? 1 : 0.8), rank: i });

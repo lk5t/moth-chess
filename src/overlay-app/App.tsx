@@ -32,6 +32,8 @@ export function OverlayApp() {
   const [tab, setTab] = useState<OverlayTab>('analysis');
   const [tree, setTree] = useState<NeuralTree | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [hudOpen, setHudOpen] = useState(false);
   const portRef = useRef<chrome.runtime.Port | null>(null);
 
   useEffect(() => {
@@ -66,8 +68,8 @@ export function OverlayApp() {
     if (!supported || !fen) { portRef.current.postMessage({ type: 'draw', arrows: [], highlights: [] }); return; }
     const layers = threatLayers(threats, settings.visual.threatLayers);
     const top = analysis.result?.lines[0]?.whiteScore;
-    const evalBar = settings.visual.evalBar && top ? { white: top.type === 'mate' ? (top.value > 0 || (top.value === 0 && top.winner === 'w') ? 1 : 0) : 1 / (1 + Math.pow(10, -top.value / 400)), label: formatScore(top) } : null;
-    portRef.current.postMessage({ type: 'draw', arrows: [...arrowsFromResult(analysis.result, settings), ...layers.arrows], highlights: settings.visual.squareHighlights ? layers.highlights : [], evalBar });
+    const evalBar = settings.hud.evalBar !== 'off' && top ? { white: top.type === 'mate' ? (top.value > 0 || (top.value === 0 && top.winner === 'w') ? 1 : 0) : 1 / (1 + Math.pow(10, -top.value / 400)), label: formatScore(top) } : null;
+    portRef.current.postMessage({ type: 'draw', arrows: [...arrowsFromResult(analysis.result, settings, settings.hud.arrowCount), ...layers.arrows], highlights: settings.visual.squareHighlights ? layers.highlights : [], evalBar });
   }, [analysis.result, settings, threats, supported, fen]);
 
   const toast = useCallback((m: string) => { setToastMsg(m); setTimeout(() => setToastMsg(null), 3200); }, []);
@@ -92,16 +94,97 @@ export function OverlayApp() {
   };
 
   const needTurn = reading && !reading.verified && !reading.turn;
+  const compact = settings.hud.layout === 'compact' && !expanded;
+  const top = analysis.result?.lines[0];
+  const statusRow = settings.hud.showStatus && (
+    <div className="row">
+      <EngineStatusBadge status={analysis.status} detail={analysis.statusDetail} />
+      <span className="grow" />
+      <span className="badge neutral" title="Current mode">{verdict?.status === 'supported' ? verdict.context : '…'}</span>
+      {reading && <span className={`badge ${reading.verified ? 'good' : 'warn'}`} title={reading.verified ? 'Side to move, castling and en passant come from the page itself' : 'Only piece placement could be read'}>{reading.verified ? 'Verified' : 'Unverified'}</span>}
+    </div>
+  );
+  const engineError = analysis.status === 'error' && (
+    <div className="banner bad small" role="alert">{analysis.statusDetail ?? 'The engine stopped.'}
+      <div className="row" style={{ marginTop: 6, gap: 6 }}><button className="btn sm" onClick={analysis.retry}>Restart engine</button>
+        <button className="btn sm ghost" onClick={() => updateSettings({ engine: { kind: settings.engine.kind === 'moth' ? 'stockfish' : 'moth' } })}>Use {settings.engine.kind === 'moth' ? 'Stockfish' : 'MOTH Engine'}</button></div>
+    </div>
+  );
+  if (compact) {
+    return (
+      <AppContext.Provider value={ctx}>
+        <div className="stack" style={{ padding: 10, gap: 8, zoom: settings.appearance.overlayScale }} data-hud="compact">
+          {statusRow}
+          {engineError}
+          {!reading && <div className="banner small">Looking for the analysis board on this page…</div>}
+          {needTurn && (
+            <div className="row small"><span className="grow">Side to move?</span>
+              <button className={`btn sm ${manualTurn === 'w' ? 'primary' : ''}`} onClick={() => setManualTurn('w')}>White</button>
+              <button className={`btn sm ${manualTurn === 'b' ? 'primary' : ''}`} onClick={() => setManualTurn('b')}>Black</button></div>
+          )}
+          {fenError && <div className="banner bad small">This board position is not legal: {fenError}</div>}
+          {fen && (
+            <div className="card" style={{ padding: 10 }}>
+              <div className="row">
+                <span className="mono" style={{ fontSize: 22, fontWeight: 800 }} aria-live="polite" data-testid="hud-score">{top ? formatScore(top.whiteScore) : '…'}</span>
+                <span className="grow" />
+                <span className="small muted">{analysis.result ? `depth ${analysis.result.depth}` : analysis.running ? 'thinking…' : 'paused'}</span>
+              </div>
+              {settings.hud.showPv && top && <div className="pv small" style={{ marginTop: 4 }} data-testid="hud-pv"><b>{top.pvSan[0]}</b> {top.pvSan.slice(1, 8).join(' ')}</div>}
+            </div>
+          )}
+          <div className="row">
+            <button className="btn sm" onClick={() => (analysis.running ? analysis.stop() : analysis.start())}>{analysis.running ? 'Pause' : 'Analyse'}</button>
+            <span className="grow" />
+            <button className="btn sm ghost" onClick={() => setExpanded(true)}>More</button>
+            <button className="btn sm ghost" onClick={() => openFull({ fen: fen ?? undefined })} title="Open on the full MOTH board" aria-label="Open full board">⤢</button>
+          </div>
+        </div>
+        {toastMsg && <div className="card glow small" style={{ position: 'fixed', bottom: 8, left: 8, right: 8, padding: 8 }} aria-live="polite">{toastMsg}</div>}
+      </AppContext.Provider>
+    );
+  }
   return (
     <AppContext.Provider value={ctx}>
       <div className="stack" style={{ padding: 10, gap: 8, zoom: settings.appearance.overlayScale }}>
         <div className="row">
-          <EngineStatusBadge status={analysis.status} detail={analysis.statusDetail} />
+          {settings.hud.showStatus ? <EngineStatusBadge status={analysis.status} detail={analysis.statusDetail} /> : null}
           <span className="grow" />
-          <span className="badge neutral" title="Current mode">{verdict?.status === 'supported' ? verdict.context : '…'}</span>
+          {settings.hud.showStatus && <span className="badge neutral" title="Current mode">{verdict?.status === 'supported' ? verdict.context : '…'}</span>}
+          {settings.hud.layout === 'compact' && <button className="btn sm ghost" onClick={() => setExpanded(false)} title="Back to the compact HUD">Less</button>}
+          <button className="btn sm ghost" onClick={() => setHudOpen((o) => !o)} title="Customise the HUD" aria-label="Customise the HUD" aria-expanded={hudOpen}>◧</button>
           <button className="btn sm ghost" onClick={() => chrome.runtime.openOptionsPage()} title="Settings" aria-label="Settings">⚙</button>
           <button className="btn sm ghost" onClick={() => openFull({ fen: fen ?? undefined })} title="Open on the full MOTH board" aria-label="Open full board">⤢</button>
         </div>
+        {hudOpen && (
+          <div className="card small" style={{ padding: 10 }} data-testid="hud-settings">
+            <div className="row wrap" style={{ gap: 6, marginBottom: 6 }}>
+              <span className="muted">Layout</span>
+              <div className="seg" role="group" aria-label="HUD layout">
+                <button aria-pressed={settings.hud.layout === 'full'} onClick={() => updateSettings({ hud: { layout: 'full' } })}>Full</button>
+                <button aria-pressed={settings.hud.layout === 'compact'} onClick={() => { setExpanded(false); updateSettings({ hud: { layout: 'compact' } }); }}>Compact</button>
+              </div>
+            </div>
+            <div className="row wrap" style={{ gap: 6, marginBottom: 6 }}>
+              <span className="muted">Eval bar</span>
+              <div className="seg" role="group" aria-label="Evaluation bar position">
+                {(['left', 'right', 'off'] as const).map((v) => <button key={v} aria-pressed={settings.hud.evalBar === v} onClick={() => updateSettings({ hud: { evalBar: v } })}>{v === 'off' ? 'Hidden' : v[0].toUpperCase() + v.slice(1)}</button>)}
+              </div>
+            </div>
+            <div className="row wrap" style={{ gap: 6, marginBottom: 6 }}>
+              <span className="muted">Arrows</span>
+              <div className="seg" role="group" aria-label="Number of arrows">
+                {[0, 1, 2, 3].map((n) => <button key={n} aria-pressed={settings.hud.arrowCount === n} onClick={() => updateSettings({ hud: { arrowCount: n } })}>{n}</button>)}
+              </div>
+            </div>
+            <Toggle checked={settings.hud.bestMoveSquares} onChange={(v) => updateSettings({ hud: { bestMoveSquares: v } })} label="Outline best-move squares" />
+            <Toggle checked={settings.hud.showPv} onChange={(v) => updateSettings({ hud: { showPv: v } })} label="Show principal variation" />
+            <Toggle checked={settings.hud.showStatus} onChange={(v) => updateSettings({ hud: { showStatus: v } })} label="Show engine status" />
+            <Toggle checked={settings.hud.avoidBoard} onChange={(v) => updateSettings({ hud: { avoidBoard: v } })} label="Keep panel off the board" />
+            <div className="muted" style={{ marginTop: 4 }}>Drag the title bar to move the panel; ⇆ puts it back beside the board.</div>
+          </div>
+        )}
+        {engineError}
         {!reading && <div className="banner">Looking for the analysis board on this page…</div>}
         {reading && (
           <div className="row small wrap" style={{ gap: 6 }}>

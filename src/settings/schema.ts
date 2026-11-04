@@ -5,9 +5,22 @@ export type Accent = 'violet' | 'indigo' | 'teal' | 'rose' | 'amber';
 export type DetailLevel = 'brief' | 'standard' | 'detailed';
 export type EngineChoice = 'moth' | 'stockfish';
 export type MothStyle = 'aggressive' | 'balanced' | 'defensive';
+export type ProfileId = 'eco' | 'standard' | 'performance' | 'custom';
+export type HudLayout = 'full' | 'compact';
+export type EvalBarSide = 'left' | 'right' | 'off';
+
+/** Bumped whenever stored settings need a migration step (see migrateSettings). v2.0 data had no version → 2. */
+export const SETTINGS_VERSION = 3;
 
 export interface Settings {
+  settingsVersion: number;
   enabled: boolean;
+  /** Performance profile; 'custom' once the user changes an engine resource by hand. */
+  performance: { profile: ProfileId; debounceMs: number; idleSec: number };
+  /** In-page analysis HUD on permitted analysis pages. */
+  hud: { layout: HudLayout; evalBar: EvalBarSide; bestMoveSquares: boolean; arrowCount: number; showPv: boolean; showStatus: boolean; avoidBoard: boolean };
+  /** First-run setup. `completed` is the app version that finished onboarding ('' = never). */
+  onboarding: { completed: string };
   appearance: { theme: Theme; accent: Accent; overlayOpacity: number; overlayScale: number; animation: number };
   engine: { depth: number; moveTimeMs: number; threads: number; hashMb: number; multiPv: number; kind: EngineChoice; reviewKind: EngineChoice };
   /** MOTH Engine: style shared by analysis, play and on-board suggestions; model = 'builtin' or idb:<id>. */
@@ -22,7 +35,11 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
+  settingsVersion: SETTINGS_VERSION,
   enabled: true,
+  performance: { profile: 'standard', debounceMs: 140, idleSec: 90 },
+  hud: { layout: 'full', evalBar: 'left', bestMoveSquares: true, arrowCount: 3, showPv: true, showStatus: true, avoidBoard: true },
+  onboarding: { completed: '' },
   appearance: { theme: 'dark', accent: 'violet', overlayOpacity: 0.97, overlayScale: 1, animation: 1 },
   engine: { depth: 18, moveTimeMs: 0, threads: 1, hashMb: 64, multiPv: 3, kind: 'moth', reviewKind: 'stockfish' },
   moth: { style: 'balanced', model: 'builtin', ownBook: true, moveTimeMs: 100, learning: true, ponder: true },
@@ -50,6 +67,9 @@ export const LIMITS = {
   arrowOpacity: [0.2, 1],
   reviewDepth: [8, 22],
   mothMoveTime: [5, 5000],
+  debounceMs: [30, 1000],
+  idleSec: [10, 600],
+  arrowCount: [0, 3],
 } as const;
 
 const clamp = (v: unknown, [lo, hi]: readonly [number, number], d: number) => {
@@ -67,8 +87,25 @@ export function validateSettings(raw: unknown): Settings {
   const d = DEFAULT_SETTINGS;
   const a = r.appearance ?? {}, e = r.engine ?? {}, v = r.visual ?? {}, i = r.intelligence ?? {}, g = r.general ?? {}, rv = r.review ?? {}, mo = r.moth ?? {}, bo = r.board ?? {};
   const tl = v.threatLayers ?? {};
+  const pf = r.performance ?? {}, hu = r.hud ?? {}, ob = r.onboarding ?? {};
   return {
+    settingsVersion: SETTINGS_VERSION,
     enabled: bool(r.enabled, d.enabled),
+    performance: {
+      profile: oneOf(pf.profile, ['eco', 'standard', 'performance', 'custom'] as const, d.performance.profile),
+      debounceMs: int(pf.debounceMs, LIMITS.debounceMs, d.performance.debounceMs),
+      idleSec: int(pf.idleSec, LIMITS.idleSec, d.performance.idleSec),
+    },
+    hud: {
+      layout: oneOf(hu.layout, ['full', 'compact'] as const, d.hud.layout),
+      evalBar: oneOf(hu.evalBar, ['left', 'right', 'off'] as const, d.hud.evalBar),
+      bestMoveSquares: bool(hu.bestMoveSquares, d.hud.bestMoveSquares),
+      arrowCount: int(hu.arrowCount, LIMITS.arrowCount, d.hud.arrowCount),
+      showPv: bool(hu.showPv, d.hud.showPv),
+      showStatus: bool(hu.showStatus, d.hud.showStatus),
+      avoidBoard: bool(hu.avoidBoard, d.hud.avoidBoard),
+    },
+    onboarding: { completed: typeof ob.completed === 'string' && ob.completed.length <= 20 ? ob.completed : d.onboarding.completed },
     appearance: {
       theme: oneOf(a.theme, ['dark', 'light', 'system'] as const, d.appearance.theme),
       accent: oneOf(a.accent, ['violet', 'indigo', 'teal', 'rose', 'amber'] as const, d.appearance.accent),
@@ -134,4 +171,34 @@ export function mergeSettings(base: Settings, patch: SettingsPatch): Settings {
     return out;
   };
   return validateSettings(merge(base, patch));
+}
+
+export interface MigrationResult { settings: Settings; from: number; changed: string[]; corrupt: boolean }
+
+/**
+ * Upgrade stored settings to the current schema without losing user choices.
+ * - v2.0 and earlier (no settingsVersion): every existing value is kept. Engine resources that differ from
+ *   the old defaults mean the user tuned them, so the profile becomes 'custom' instead of overwriting them.
+ *   Users who had already used 2.0 are not shown first-run onboarding again (they get a "what's new" link).
+ * - Corrupt input (not an object) falls back to defaults and is reported so the UI can explain it.
+ */
+export function migrateSettings(raw: unknown): MigrationResult {
+  const corrupt = raw !== undefined && raw !== null && (typeof raw !== 'object' || Array.isArray(raw));
+  const r = (!corrupt && raw ? raw : {}) as Record<string, any>;
+  const from = typeof r.settingsVersion === 'number' ? r.settingsVersion : raw ? 2 : SETTINGS_VERSION;
+  const changed: string[] = [];
+  const next: Record<string, any> = { ...r };
+  if (from < 3) {
+    const e = r.engine ?? {}, mo = r.moth ?? {};
+    const tuned = (e.hashMb !== undefined && e.hashMb !== 64) || (e.depth !== undefined && e.depth !== 18) || (mo.moveTimeMs !== undefined && mo.moveTimeMs !== 100);
+    next.performance = { profile: tuned ? 'custom' : 'standard', debounceMs: 140, idleSec: 90 };
+    changed.push(`performance profile → ${next.performance.profile}`);
+    // carry the v2.0 eval-bar switch into the HUD
+    next.hud = { evalBar: r.visual?.evalBar === false ? 'off' : 'left', layout: 'full' };
+    next.onboarding = { completed: raw ? 'pre-2.1' : '' };
+    changed.push('HUD settings added', 'onboarding marked as seen (existing install)');
+  }
+  const settings = validateSettings(next);
+  if (corrupt) changed.push('stored settings were unreadable; defaults restored');
+  return { settings, from, changed, corrupt };
 }

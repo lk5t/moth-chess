@@ -27,7 +27,13 @@ export interface BoardAdapter {
   site: SiteId;
   findBoard(doc: Document): HTMLElement | null;
   read(board: HTMLElement, doc: Document, loc: Location): BoardReading | null;
+  /** Elements whose attribute changes mean the board changed (e.g. the orientation class lives on a wrapper). */
+  watchTargets?(board: HTMLElement): Element[];
+  /** Site controls the HUD panel should not cover (move list, analysis tools, sidebar). */
+  avoid?(doc: Document): Element[];
 }
+
+const all = (doc: Document, sels: string[]) => sels.flatMap((s) => [...doc.querySelectorAll(s)]).filter((e) => (e as HTMLElement).offsetParent !== null || e.getClientRects().length > 0);
 
 const FILES = 'abcdefgh';
 type Grid = (null | { type: PieceType; color: Color })[][]; // [rankIndex 0 = rank 8][file]
@@ -133,6 +139,8 @@ const CG_TYPES: Record<string, PieceType> = { pawn: 'p', knight: 'n', bishop: 'b
 export const lichessAdapter: BoardAdapter = {
   site: 'lichess',
   findBoard: (doc) => (doc.querySelector('.main-board cg-container') ?? doc.querySelector('cg-container')) as HTMLElement | null,
+  watchTargets: (board) => [board.closest('.cg-wrap')].filter(Boolean) as Element[],
+  avoid: (doc) => all(doc, ['.analyse__tools', '.analyse__controls', '.study__side', '.practice__side']),
   read(board, _doc, loc) {
     const wrap = board.closest('.cg-wrap');
     const orientation: Orientation = wrap?.classList.contains('orientation-black') ? 'black' : 'white';
@@ -193,6 +201,8 @@ export const lichessAdapter: BoardAdapter = {
 export const chesscomAdapter: BoardAdapter = {
   site: 'chesscom',
   findBoard: (doc) => (doc.querySelector('wc-chess-board') ?? doc.querySelector('chess-board') ?? doc.querySelector('#board-analysis-board') ?? doc.querySelector('.board')) as HTMLElement | null,
+  watchTargets: (board) => [board.parentElement].filter(Boolean) as Element[],
+  avoid: (doc) => all(doc, ['#board-layout-sidebar', '.board-layout-sidebar', '#board-layout-controls', '.board-layout-controls']),
   read(board) {
     const orientation: Orientation = board.classList.contains('flipped') ? 'black' : 'white';
     const grid = emptyGrid();
