@@ -11,7 +11,7 @@ const asset = (p: string) => new URL(`moth-engine/${p}`, self.location.href).toS
 let stop = false;
 
 export interface SideConfig { name: string; style: StyleName; model: 'builtin' | 'classical'; nodes?: number; movetimeMs?: number }
-export interface MatchParams { a: SideConfig; b: SideConfig; openings: number; seed: number; startAt?: number }
+export interface MatchParams { a: SideConfig; b: SideConfig; openings: number; seed: number; startAt?: number; prior?: { wins: number; draws: number; losses: number } }
 export interface SuiteParams { positions: { fen: string; best: string[] }[]; movetimeMs: number; style: StyleName; model: 'builtin' | 'classical' }
 
 self.onmessage = async (e: MessageEvent) => {
@@ -68,7 +68,7 @@ async function match(p: MatchParams) {
   const ops = openingLines(scratch, book, p.openings, p.seed);
   const pa: Player = { name: p.a.name, engine: ea, net: p.a.model === 'builtin' ? net : null, style: p.a.style, nodes: p.a.nodes, movetimeMs: p.a.movetimeMs };
   const pb: Player = { name: p.b.name, engine: eb, net: p.b.model === 'builtin' ? net : null, style: p.b.style, nodes: p.b.nodes, movetimeMs: p.b.movetimeMs };
-  let w = 0, d = 0, l = 0, i = 0;
+  let w = p.prior?.wins ?? 0, d = p.prior?.draws ?? 0, l = p.prior?.losses ?? 0, i = 0;
   const total = ops.length * 2;
   for (const op of ops) for (const aWhite of [true, false]) {
     if (i++ < (p.startAt ?? 0)) continue; // resume after an interruption

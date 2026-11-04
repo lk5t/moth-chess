@@ -115,7 +115,7 @@ function SelfPlay({ onDone, toast }: { onDone: (e: HistEntry) => void; toast: (m
       }
       if (m.type === 'error') { wk.terminate(); setState((s) => ({ ...s, running: false, last: `Error: ${m.msg}` })); }
     };
-    wk.postMessage({ type: 'match', params: { a: side(a), b: side(b), openings, seed: 11, startAt } });
+    wk.postMessage({ type: 'match', params: { a: side(a), b: side(b), openings, seed: 11, startAt, prior: resume && state.stats ? { wins: state.stats.wins, draws: state.stats.draws, losses: state.stats.losses } : undefined } });
   };
   const sideForm = (x: Side, set: (s: Side) => void, label: string) => (
     <div className="stack" style={{ gap: 4 }}>
