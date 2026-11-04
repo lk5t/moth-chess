@@ -68,7 +68,7 @@ export function AnalysisPanel() {
         })}
       </Card>
 
-      <Card title="Analysis controls">
+      <Card title="Controls">
         <div className="row wrap" style={{ marginBottom: 8 }}>
           {analysis.running
             ? <button className="btn" onClick={analysis.stop}>■ Stop</button>
@@ -92,9 +92,12 @@ export function AnalysisPanel() {
             </label>
           )}
         </div>
-        <Slider label="Depth" value={settings.engine.depth} min={1} max={30} onChange={(v) => updateSettings({ engine: { depth: v } })} />
-        <Slider label="Lines (MultiPV)" value={settings.engine.multiPv} min={1} max={5} onChange={(v) => updateSettings({ engine: { multiPv: v } })} />
-        <Toggle label="Move arrows" checked={settings.visual.arrows} onChange={(v) => updateSettings({ visual: { arrows: v } })} />
+        <details>
+          <summary className="small muted" style={{ cursor: 'pointer', padding: '6px 0' }}>More options</summary>
+          <Slider label="Depth" value={settings.engine.depth} min={1} max={30} onChange={(v) => updateSettings({ engine: { depth: v } })} hint="How many moves ahead the engine looks. Higher is stronger but slower." />
+          <Slider label="Lines (MultiPV)" value={settings.engine.multiPv} min={1} max={5} onChange={(v) => updateSettings({ engine: { multiPv: v } })} hint="How many alternative moves to show." />
+          <Toggle label="Move arrows" checked={settings.visual.arrows} onChange={(v) => updateSettings({ visual: { arrows: v } })} />
+        </details>
       </Card>
     </div>
   );

@@ -22,8 +22,43 @@ async function main() {
   const settings = await loadSettings();
   if (!settings.enabled) return;
   const verdict = classifyPage(probe());
-  if (verdict.status !== 'supported') return;
-  start(verdict.site, settings);
+  if (verdict.status === 'supported') start(verdict.site, settings);
+  else standby(settings);
+}
+
+/** Calls `fn` at most once per `ms`, trailing (used for page-context checks driven by DOM changes). */
+function throttle(fn: () => void, ms: number) {
+  let t: ReturnType<typeof setTimeout> | undefined, last = 0;
+  const run = () => {
+    if (t) return;
+    t = setTimeout(() => { t = undefined; last = Date.now(); fn(); }, Math.max(0, ms - (Date.now() - last)));
+  };
+  return Object.assign(run, { cancel: () => { clearTimeout(t); t = undefined; } });
+}
+
+/**
+ * Standby on a page of a supported site where assistance is not available right now (a game still in
+ * progress, an unsolved puzzle, a page without a board). Nothing is drawn and no engine runs; a cheap
+ * page-context check runs when the page changes (at most once a second) or navigates, and assistance
+ * starts only once the page itself shows a permitted state.
+ */
+function standby(settings: Settings) {
+  const check = throttle(() => {
+    const v = classifyPage(probe());
+    if (v.status === 'supported') { stop(); start(v.site, settings); }
+  }, 1000);
+  const mo = new MutationObserver(check);
+  mo.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+  const nav = (window as any).navigation as EventTarget | undefined;
+  nav?.addEventListener('navigatesuccess', check);
+  window.addEventListener('popstate', check);
+  const offSettings = subscribeSettings((s) => { settings = s; if (!s.enabled) stop(); });
+  function stop() {
+    mo.disconnect(); check.cancel(); offSettings();
+    nav?.removeEventListener('navigatesuccess', check); window.removeEventListener('popstate', check);
+    delete window.__mothChess;
+  }
+  window.__mothChess = { teardown: stop, toggle: check };
 }
 
 function start(site: SiteId, initialSettings: Settings) {
@@ -297,19 +332,27 @@ function start(site: SiteId, initialSettings: Settings) {
   };
 
   // ---------- fair-play watchdog ----------
+  // Lightweight page-context check: runs when the page's DOM changes (throttled to 2×/s) or navigates,
+  // plus a slow 2 s fallback. The moment the page stops being a permitted context (a clock starts, the
+  // next unsolved puzzle loads, navigation to a live game) all assistance is removed and MOTH waits in standby.
   let lastPath = location.pathname;
-  const watchdog = setInterval(() => {
+  const fairPlayCheck = () => {
+    if (!alive) return;
     const v: PageVerdict = classifyPage(probe());
-    if (v.status !== 'supported') { send({ type: 'page', verdict: v }); teardown(v.reason); return; }
+    if (v.status !== 'supported') { send({ type: 'page', verdict: v }); teardown(v.reason, true); return; }
     if (location.pathname !== lastPath) { lastPath = location.pathname; lastSent = ''; publishBoard(); }
     if (!boardEl || !boardEl.isConnected) publishBoard();
-  }, 800);
-  cleanups.push(() => clearInterval(watchdog));
+  };
+  const fpThrottled = throttle(fairPlayCheck, 500);
+  const fpObserver = new MutationObserver(fpThrottled);
+  fpObserver.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+  const watchdog = setInterval(fairPlayCheck, 2000);
+  cleanups.push(() => { clearInterval(watchdog); fpObserver.disconnect(); fpThrottled.cancel(); });
   // single-page navigation: re-check fair play and the board immediately instead of waiting for the poll
   const nav = (window as any).navigation as EventTarget | undefined;
   const onNav = () => setTimeout(() => {
     const v: PageVerdict = classifyPage(probe());
-    if (v.status !== 'supported') { send({ type: 'page', verdict: v }); teardown(v.reason); return; }
+    if (v.status !== 'supported') { send({ type: 'page', verdict: v }); teardown(v.reason, true); return; }
     send({ type: 'page', verdict: v });
     lastPath = location.pathname; lastSent = ''; publishBoard();
   }, 50);
@@ -322,12 +365,14 @@ function start(site: SiteId, initialSettings: Settings) {
 
   function toggle() { state.hidden = !state.hidden; applyState(); persist(); if (!state.hidden) publishBoard(); }
 
-  function teardown(reason: string) {
+  /** resume: the page left a permitted state but may return to one (wait in standby instead of exiting). */
+  function teardown(reason: string, resume = false) {
     if (!alive) return;
     alive = false;
-    console.info(`[MOTH Chess] overlay removed: ${reason}`);
+    console.info(`[MOTH Chess] analysis removed: ${reason}`);
     cleanups.reverse().forEach((c) => { try { c(); } catch { /* ignore */ } });
     delete window.__mothChess;
+    if (resume && settings.enabled) standby(settings);
   }
 
   window.__mothChess = { teardown, toggle };

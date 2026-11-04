@@ -32,8 +32,39 @@ describe('fair-play restrictions', () => {
     ]) expect(classifyPage(probe(url)).status, url).toBe('blocked');
   });
   it('blocks an analysis URL when live-game elements (running clocks) are present', () => {
-    expect(classifyPage(probe('https://lichess.org/analysis', ['.rclock'])).status).toBe('blocked');
+    expect(classifyPage(probe('https://lichess.org/analysis', ['.rclock.running'])).status).toBe('blocked');
     expect(classifyPage(probe('https://www.chess.com/analysis', ['.clock-component.clock-player-turn'])).status).toBe('blocked');
+  });
+  it('3.0: finished games and solved puzzles become analysable only with positive evidence on the page', () => {
+    // URL alone (and any uncertain state) → blocked, marked pending
+    for (const url of ['https://lichess.org/AbCdEf12', 'https://lichess.org/training/aB3dE', 'https://www.chess.com/game/live/123456', 'https://www.chess.com/puzzles/rated']) {
+      const v = classifyPage(probe(url));
+      expect(v.status, url).toBe('blocked');
+      expect((v as { pending?: boolean }).pending, url).toBe(true);
+    }
+    expect(classifyPage(probe('https://lichess.org/AbCdEf12', ['.result-wrap']))).toMatchObject({ status: 'supported', context: 'finished game' });
+    expect(classifyPage(probe('https://lichess.org/training/aB3dE', ['.puzzle__feedback.after']))).toMatchObject({ status: 'supported', context: 'solved puzzle' });
+    expect(classifyPage(probe('https://www.chess.com/game/live/123456', ['.game-over-modal-content']))).toMatchObject({ status: 'supported', context: 'finished game' });
+    expect(classifyPage(probe('https://www.chess.com/puzzles/rated', ['.puzzle-feedback-solved']))).toMatchObject({ status: 'supported', context: 'solved puzzle' });
+    // a running clock always wins, even with "game over" evidence
+    expect(classifyPage(probe('https://lichess.org/AbCdEf12', ['.result-wrap', '.rclock.running'])).status).toBe('blocked');
+    expect(classifyPage(probe('https://www.chess.com/game/live/1', ['.game-over-modal-content', '.clock-player-turn'])).status).toBe('blocked');
+  });
+  it('3.0: timed and competitive modes stay blocked with no way to unlock', () => {
+    for (const [url, dom] of [
+      ['https://lichess.org/storm', ['.puzzle__feedback.after']], ['https://lichess.org/streak', ['.puzzle__feedback.after']], ['https://lichess.org/racer/abc', []],
+      ['https://lichess.org/AbCdEf123456', ['.result-wrap']], ['https://lichess.org/tournament/xyz', ['.result-wrap']],
+      ['https://www.chess.com/puzzles/rush', ['.puzzle-feedback-solved']], ['https://www.chess.com/puzzles/battle', ['.puzzle-feedback-solved']],
+      ['https://www.chess.com/play/online', ['.game-over-modal-content']], ['https://www.chess.com/tournament/live/x', ['.game-over-modal-content']],
+    ] as const) {
+      const v = classifyPage(probe(url, [...dom]));
+      expect(v.status, url).toBe('blocked');
+      expect((v as { pending?: boolean }).pending, url).toBeFalsy();
+    }
+  });
+  it('3.0: lessons, editor and explorer are allowed', () => {
+    expect(classifyPage(probe('https://lichess.org/editor')).status).toBe('supported');
+    expect(classifyPage(probe('https://www.chess.com/lessons/the-pin/1')).status).toBe('supported');
   });
   it('ignores unrelated websites and non-https', () => {
     expect(classifyPage(probe('https://example.com/analysis')).status).toBe('unsupported');

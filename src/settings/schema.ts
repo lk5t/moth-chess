@@ -8,6 +8,7 @@ export type MothStyle = 'aggressive' | 'balanced' | 'defensive';
 export type ProfileId = 'eco' | 'standard' | 'performance' | 'custom';
 export type HudLayout = 'full' | 'compact';
 export type EvalBarSide = 'left' | 'right' | 'off';
+export type UiMode = 'simple' | 'full';
 
 /** Bumped whenever stored settings need a migration step (see migrateSettings). v2.0 data had no version → 2. */
 export const SETTINGS_VERSION = 3;
@@ -21,6 +22,10 @@ export interface Settings {
   hud: { layout: HudLayout; evalBar: EvalBarSide; bestMoveSquares: boolean; arrowCount: number; showPv: boolean; showStatus: boolean; avoidBoard: boolean };
   /** First-run setup. `completed` is the app version that finished onboarding ('' = never). */
   onboarding: { completed: string };
+  /** Workspace layout. 'simple' = beginner mode: advanced tools and Engine Lab stay out of the way. */
+  ui: { mode: UiMode; lastTab: string; tips: boolean };
+  /** Daily check of GitHub Releases for a newer version (notice only; never installs anything). */
+  updates: { auto: boolean };
   appearance: { theme: Theme; accent: Accent; overlayOpacity: number; overlayScale: number; animation: number };
   engine: { depth: number; moveTimeMs: number; threads: number; hashMb: number; multiPv: number; kind: EngineChoice; reviewKind: EngineChoice };
   /** MOTH Engine: style shared by analysis, play and on-board suggestions; model = 'builtin' or idb:<id>. */
@@ -40,6 +45,8 @@ export const DEFAULT_SETTINGS: Settings = {
   performance: { profile: 'standard', debounceMs: 140, idleSec: 90 },
   hud: { layout: 'full', evalBar: 'left', bestMoveSquares: true, arrowCount: 3, showPv: true, showStatus: true, avoidBoard: true },
   onboarding: { completed: '' },
+  ui: { mode: 'simple', lastTab: 'home', tips: true },
+  updates: { auto: true },
   appearance: { theme: 'dark', accent: 'violet', overlayOpacity: 0.97, overlayScale: 1, animation: 1 },
   engine: { depth: 18, moveTimeMs: 0, threads: 1, hashMb: 64, multiPv: 3, kind: 'moth', reviewKind: 'stockfish' },
   moth: { style: 'balanced', model: 'builtin', ownBook: true, moveTimeMs: 100, learning: true, ponder: true },
@@ -105,6 +112,12 @@ export function validateSettings(raw: unknown): Settings {
       showStatus: bool(hu.showStatus, d.hud.showStatus),
       avoidBoard: bool(hu.avoidBoard, d.hud.avoidBoard),
     },
+    ui: {
+      mode: oneOf((r.ui ?? {}).mode, ['simple', 'full'] as const, d.ui.mode),
+      lastTab: typeof (r.ui ?? {}).lastTab === 'string' && /^[a-z]{2,16}$/.test(r.ui.lastTab) ? r.ui.lastTab : d.ui.lastTab,
+      tips: bool((r.ui ?? {}).tips, d.ui.tips),
+    },
+    updates: { auto: bool((r.updates ?? {}).auto, d.updates.auto) },
     onboarding: { completed: typeof ob.completed === 'string' && ob.completed.length <= 20 ? ob.completed : d.onboarding.completed },
     appearance: {
       theme: oneOf(a.theme, ['dark', 'light', 'system'] as const, d.appearance.theme),
@@ -196,6 +209,8 @@ export function migrateSettings(raw: unknown): MigrationResult {
     // carry the v2.0 eval-bar switch into the HUD
     next.hud = { evalBar: r.visual?.evalBar === false ? 'off' : 'left', layout: 'full' };
     next.onboarding = { completed: raw ? 'pre-2.1' : '' };
+    // people upgrading from 2.0 already know every tool: keep the full workspace for them
+    next.ui = { mode: raw ? 'full' : 'simple', lastTab: 'analysis', tips: !raw };
     changed.push('HUD settings added', 'onboarding marked as seen (existing install)');
   }
   const settings = validateSettings(next);

@@ -214,6 +214,7 @@ describe('engine recovery (v2.1)', () => {
       fakes[fakes.length - 1].crash();
       await h.result;
       expect(e.consecutiveFailures).toBe(1);
+      e.clearCache(); // a cached answer does not prove the engine is healthy
       expect((await e.analyse(START_FEN, { depth: 2, multiPv: 1 }).result).complete).toBe(true);
       expect(e.consecutiveFailures).toBe(0);
     }

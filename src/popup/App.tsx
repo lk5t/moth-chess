@@ -3,6 +3,7 @@ import { useSettings } from '@/settings/useSettings';
 import { Toggle, useThemeRoot, BetaBadge } from '@/components/ui';
 import { ProfilePicker, profileLabel, openExt } from '@/components/shared';
 import type { TabStatus } from '@/utils/messages';
+import { DISCLAIMER } from '@/content/detector/sites';
 
 export function PopupApp() {
   const [settings, update] = useSettings();
@@ -53,7 +54,8 @@ export function PopupApp() {
         {!status && <div className="small">Checking…</div>}
         {status?.state === 'disabled' && <div className="banner warn small">MOTH Chess is turned off. Use the switch above.</div>}
         {status?.state === 'unsupported' && <div className="small">{status.reason}.</div>}
-        {status?.state === 'blocked' && <div className="banner bad small"><b>Blocked for fair play.</b> {status.reason}. MOTH never assists in live or rated games.</div>}
+        {status?.state === 'blocked' && <div className="banner bad small"><b>No engine help on this page.</b> {status.reason}. MOTH never assists in live or rated games — the board, Library and training still work.</div>}
+        {status?.state === 'pending' && <div className="banner small"><b>{status.label}:</b> {status.reason}. MOTH is waiting on the page and turns on by itself.</div>}
         {status?.state === 'needs-permission' && (
           <>
             <div className="small">Supported: <b>{status.label}</b>. Allow MOTH to show its analysis here.</div>
@@ -69,6 +71,7 @@ export function PopupApp() {
         )}
         {msg && <div className="small" aria-live="polite">{msg}</div>}
       </div>
+      <p className="muted" style={{ fontSize: 10.5, margin: '8px 2px 0' }}>{DISCLAIMER}</p>
 
       <button className="btn primary" style={{ width: '100%', marginTop: 10 }} onClick={() => openBoard()}>Open analysis board</button>
       <div className="row" style={{ marginTop: 6 }}>

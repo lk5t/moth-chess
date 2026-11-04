@@ -4,6 +4,7 @@ import { SITES, classifyUrl, siteForUrl, type SiteDef } from '@/content/detector
 import { PORT_CONTENT, PORT_OVERLAY, type RuntimeRequest, type TabStatus } from '@/utils/messages';
 import { loadSettings, migrateStoredSettings, SETTINGS_KEY } from '@/settings/store';
 import { logError } from '@/diagnostics/log';
+import { checkForUpdate, recordInstalled, updateAvailable } from '@/updates/updates';
 
 const scriptId = (s: SiteDef) => `moth-${s.id}`;
 
@@ -69,9 +70,19 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     if (m.corrupt) await logError('settings', 'Stored settings were unreadable and were reset to defaults (the original was kept for diagnostics).');
   } catch (e) { await logError('settings', `migration failed: ${String((e as Error)?.message ?? e)}`); }
   await safeSync();
+  if (details.reason === 'update' || details.reason === 'install') await recordInstalled(chrome.runtime.getManifest().version, details.previousVersion);
   if (details.reason === 'install') chrome.tabs.create({ url: chrome.runtime.getURL('welcome.html') });
 });
-chrome.runtime.onStartup.addListener(async () => { try { await migrateStoredSettings(); } catch { /* logged on next install */ } void safeSync(); });
+// Browser start: repair settings, then (if enabled) a once-a-day release check that only sets a badge.
+chrome.runtime.onStartup.addListener(async () => {
+  try { await migrateStoredSettings(); } catch { /* logged on next install */ }
+  void safeSync();
+  try {
+    if (!(await loadSettings()).updates.auto) return;
+    const v = chrome.runtime.getManifest().version;
+    if (updateAvailable(await checkForUpdate(v), v)) { await chrome.action.setBadgeText({ text: 'new' }); await chrome.action.setBadgeBackgroundColor({ color: '#6d4dff' }); }
+  } catch { /* offline */ }
+});
 chrome.permissions.onAdded.addListener(() => { void safeSync(); });
 chrome.permissions.onRemoved.addListener(() => { void safeSync(); broadcastTeardown('Site access was removed'); });
 chrome.storage.onChanged.addListener(async (changes, area) => {
@@ -116,10 +127,13 @@ async function tabStatus(tabId: number, url?: string): Promise<TabStatus> {
   if (!s.enabled) return { state: 'disabled' };
   const v = classifyUrl(url);
   if (v.status === 'unsupported') return { state: 'unsupported', reason: v.reason };
-  if (v.status === 'blocked') return { state: 'blocked', reason: v.reason };
+  if (v.status === 'blocked' && !v.pending) return { state: 'blocked', reason: v.reason };
   const site = siteForUrl(url)!;
   if (!(await chrome.permissions.contains({ origins: [site.origin] }))) return { state: 'needs-permission', origin: site.origin, label: site.label };
-  return { state: 'ready', label: site.label, injected: !!tabs.get(tabId)?.content };
+  const injected = !!tabs.get(tabId)?.content;
+  // review pages: the URL alone cannot show "finished", so ask the page (its DOM check is authoritative)
+  if (v.status === 'blocked') return injected ? { state: 'ready', label: site.label, injected } : { state: 'pending', reason: v.reason, label: site.label };
+  return { state: 'ready', label: site.label, injected };
 }
 
 chrome.runtime.onMessage.addListener((msg: RuntimeRequest, sender, sendResponse) => {

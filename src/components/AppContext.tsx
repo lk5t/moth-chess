@@ -3,7 +3,7 @@ import type { Orientation, MoveRecord, NeuralTree } from '@/types';
 import type { Settings, SettingsPatch } from '@/settings/schema';
 import type { AnalysisState } from './useAnalysis';
 
-export type TabId = 'analysis' | 'intelligence' | 'threats' | 'neural' | 'whatif' | 'review' | 'openings' | 'coach' | 'memory' | 'dashboard' | 'play' | 'engine';
+export type TabId = 'home' | 'analysis' | 'intelligence' | 'threats' | 'neural' | 'whatif' | 'review' | 'openings' | 'coach' | 'memory' | 'dashboard' | 'play' | 'engine';
 
 export interface AppCtx {
   surface: 'board' | 'overlay';

@@ -277,3 +277,28 @@ table.t td { padding: 5px 6px; border-bottom: 1px solid var(--line); }
 .steps { display: flex; gap: 6px; }
 .steps span { height: 4px; flex: 1; border-radius: 4px; background: var(--line); }
 .steps span.on { background: var(--accent); }
+
+/* v3 workspace */
+.tile.action { all: unset; box-sizing: border-box; cursor: pointer; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; gap: 6px; transition: border-color var(--t), transform var(--t), background var(--t); }
+.tile.action:hover { border-color: var(--accent); background: var(--panel-2); transform: translateY(calc(-1px * var(--anim))); }
+.tile.action:focus-visible { outline: 2px solid var(--accent); }
+.tile .ic { width: 22px; height: 22px; color: var(--accent); display: inline-flex; }
+.tile .ic svg { width: 22px; height: 22px; }
+.list-row { all: unset; box-sizing: border-box; width: 100%; display: flex; align-items: center; gap: 8px; padding: 7px 6px; border-radius: 8px; cursor: pointer; }
+.list-row:hover { background: var(--accent-soft); }
+.list-row:focus-visible { outline: 2px solid var(--accent); }
+.sections { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; border-bottom: 1px solid var(--line); margin-bottom: 14px; }
+.sections button { all: unset; cursor: pointer; padding: 8px 12px; font-weight: 600; color: var(--text-2); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.sections button[aria-selected='true'] { color: var(--text); border-bottom-color: var(--accent); }
+.sections button:hover { color: var(--text); }
+.sections button:focus-visible { outline: 2px solid var(--accent); border-radius: 6px; }
+.menu { position: absolute; z-index: 40; background: var(--panel); border: 1px solid var(--line-strong); border-radius: 12px; box-shadow: var(--shadow); padding: 6px; display: flex; flex-direction: column; min-width: 220px; }
+.menu button { all: unset; cursor: pointer; padding: 8px 10px; border-radius: 8px; display: flex; flex-direction: column; gap: 2px; }
+.menu button:hover, .menu button:focus-visible { background: var(--accent-soft); }
+.workspace { padding: 20px 24px; max-width: 1500px; }
+.workspace-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.workspace-head h1 { margin: 0; font-size: 20px; font-weight: 750; }
+.workspace .main { padding: 0; }
+@keyframes fade-in { from { opacity: 0; transform: translateY(calc(4px * var(--anim))); } to { opacity: 1; transform: none; } }
+.fade-in { animation: fade-in calc(180ms * var(--anim)) ease-out; }
+@media (max-width: 900px) { .workspace { padding: 14px; } .workspace .main { grid-template-columns: 1fr; } }

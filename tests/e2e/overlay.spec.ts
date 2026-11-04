@@ -102,9 +102,22 @@ test('fair play: overlay never starts on an analysis URL that shows a running cl
   await expect(page.locator('moth-chess-host')).toHaveCount(0);
 });
 
-test('content script is not injected on live-game routes even with host access', async ({ context }) => {
+test('no assistance on a game page that is still in progress, even with host access', async ({ context }) => {
   const page = await context.newPage();
   await page.goto('https://lichess.org/AbCdEf12');
   await page.waitForTimeout(3000);
   await expect(page.locator('moth-chess-host')).toHaveCount(0);
+});
+
+test('3.0: a finished game becomes analysable; MOTH waits in standby until then and leaves when a clock runs', async ({ context }) => {
+  const page = await context.newPage();
+  await page.goto('https://lichess.org/AbCdEf12');
+  await page.waitForTimeout(2500);
+  await expect(page.locator('moth-chess-host')).toHaveCount(0);
+  await page.evaluate(() => { const d = document.createElement('div'); d.className = 'result-wrap'; d.textContent = '1-0'; document.body.appendChild(d); });
+  await expect(page.locator('moth-chess-host')).toHaveCount(1, { timeout: 6_000 });
+  const frame = await overlayFrame(page);
+  await expect(frame.getByText('finished game').first()).toBeVisible({ timeout: 10_000 });
+  await page.evaluate(() => { const d = document.createElement('div'); d.className = 'rclock rclock-white running'; document.body.appendChild(d); });
+  await expect(page.locator('moth-chess-host')).toHaveCount(0, { timeout: 5_000 });
 });

@@ -44,9 +44,10 @@ export function useGrantedSites() {
   useEffect(() => {
     void refresh();
     const on = () => void refresh();
-    chrome.permissions?.onAdded?.addListener(on);
-    chrome.permissions?.onRemoved?.addListener(on);
-    return () => { chrome.permissions?.onAdded?.removeListener(on); chrome.permissions?.onRemoved?.removeListener(on); };
+    const ev = chrome.permissions as unknown as { onAdded?: chrome.events.Event<() => void>; onRemoved?: chrome.events.Event<() => void> };
+    ev?.onAdded?.addListener(on);
+    ev?.onRemoved?.addListener(on);
+    return () => { ev?.onAdded?.removeListener(on); ev?.onRemoved?.removeListener(on); };
   }, []);
   return { granted, refresh };
 }

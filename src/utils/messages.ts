@@ -37,5 +37,7 @@ export type TabStatus =
   | { state: 'disabled' }
   | { state: 'unsupported'; reason: string }
   | { state: 'blocked'; reason: string }
+  /** finished-game / solved-puzzle page that is not finished yet; MOTH waits on the page */
+  | { state: 'pending'; reason: string; label: string }
   | { state: 'needs-permission'; origin: string; label: string }
   | { state: 'ready'; label: string; injected: boolean };

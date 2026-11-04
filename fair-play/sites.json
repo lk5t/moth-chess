@@ -1,42 +1,53 @@
 {
-  "$comment": "MOTH Chess fair-play rules. Compiled into the extension at build time (not editable in the installed extension). Evaluation order per page: liveDom (block) -> allow (support) -> block (block) -> otherwise unsupported. Paths are JavaScript regular expressions matched against location.pathname.",
+  "$comment": "MOTH Chess fair-play rules (3.0). Compiled into the extension at build time. Per page: liveDom (block) -> allow (support) -> review (support only when one requireDom selector is present, otherwise blocked as 'pending') -> block (block) -> otherwise unsupported. Paths are JavaScript regular expressions matched against location.pathname. Only engine ASSISTANCE is gated: the MOTH board, dashboard, settings and themes work everywhere.",
   "sites": [
     {
       "id": "lichess",
-      "label": "Lichess analysis board, studies & practice",
+      "label": "Lichess",
       "hosts": ["lichess.org"],
       "origin": "https://lichess.org/*",
       "adapter": "chessground",
-      "matches": ["https://lichess.org/analysis*", "https://lichess.org/practice/*", "https://lichess.org/study/*"],
-      "liveDom": [".rclock", ".round__app", "main.round", ".ricons", ".follow-up .fbt.new-opponent"],
+      "matches": ["https://lichess.org/*"],
+      "liveDom": [".rclock.running", ".rclock .time.running", ".storm--play", ".racer--play"],
       "allow": [
         { "path": "^/analysis(/|$)", "context": "analysis" },
         { "path": "^/practice/", "context": "practice" },
-        { "path": "^/study/(?!broadcast)[A-Za-z0-9]{8}(/[A-Za-z0-9]{8})?/?$", "context": "study" }
+        { "path": "^/study/(?!broadcast)[A-Za-z0-9]{8}(/[A-Za-z0-9]{8})?/?$", "context": "study" },
+        { "path": "^/editor(/|$)", "context": "board editor" }
+      ],
+      "review": [
+        { "path": "^/[A-Za-z0-9]{8}(/(white|black))?/?$", "context": "finished game", "requireDom": [".result-wrap", ".rcontrols .follow-up", ".status .result"], "pendingReason": "Engine help turns on here once the game has finished" },
+        { "path": "^/training(/[A-Za-z0-9]{5,}|/[a-zA-Z]+)?/?$", "context": "solved puzzle", "requireDom": [".puzzle__feedback.after", ".puzzle__vote", ".puzzle__more"], "pendingReason": "Engine help turns on once you have solved or failed this puzzle" }
       ],
       "block": [
-        { "path": "^/(tv|games|training|streak|storm|racer|tournament|swiss|simul|broadcast|setup|challenge)\\b", "reason": "Live, rated or competitive Lichess page" },
-        { "path": "^/[A-Za-z0-9]{8}(/(white|black))?/?$", "reason": "Lichess game page (live or finished game view)" },
-        { "path": "^/[A-Za-z0-9]{12}/?$", "reason": "Lichess game page (player view)" }
+        { "path": "^/(tv|games|streak|storm|racer|tournament|swiss|simul|broadcast|setup|challenge)\\b", "reason": "Live, timed or competitive Lichess page" },
+        { "path": "^/[A-Za-z0-9]{12}/?$", "reason": "Lichess game in progress (player view)" }
       ],
-      "unsupportedReason": "Only the Lichess analysis board, studies and Practice are supported"
+      "unsupportedReason": "This Lichess page has no board MOTH can analyse"
     },
     {
       "id": "chesscom",
-      "label": "Chess.com analysis board & games vs computer",
+      "label": "Chess.com",
       "hosts": ["chess.com", "www.chess.com"],
       "origin": "https://www.chess.com/*",
       "adapter": "chesscom",
-      "matches": ["https://www.chess.com/analysis*", "https://www.chess.com/play/computer*"],
-      "liveDom": [".clock-component.clock-player-turn", ".clock-player-turn", "[data-cy=\"clock-running\"]", ".board-layout-player .clock-running"],
+      "matches": ["https://www.chess.com/*"],
+      "liveDom": [".clock-component.clock-running", ".clock-component.clock-player-turn", ".clock-player-turn", "[data-cy=\"clock-running\"]", ".board-layout-player .clock-running", ".puzzle-rush-timer", ".puzzle-battle-timer"],
       "allow": [
         { "path": "^/analysis(/|$)", "context": "analysis" },
-        { "path": "^/play/computer(/|$)", "context": "computer" }
+        { "path": "^/play/computer(/|$)", "context": "computer" },
+        { "path": "^/(lessons|drills|practice)/", "context": "lesson" },
+        { "path": "^/(explorer|openings)(/|$)", "context": "explorer" }
+      ],
+      "review": [
+        { "path": "^/game/(live|daily)/\\d+/?$", "context": "finished game", "requireDom": [".game-over-modal-content", ".game-over-header-component", ".game-result-component", "[data-cy=\"game-over\"]"], "pendingReason": "Engine help turns on here once the game has finished" },
+        { "path": "^/game/(computer|\\d+)(/|$)", "context": "finished game", "requireDom": [".game-over-modal-content", ".game-result-component"], "pendingReason": "Engine help turns on here once the game has finished" },
+        { "path": "^/puzzles?(/(rated|learning|problem/\\d+)?)?/?$", "context": "solved puzzle", "requireDom": [".puzzle-feedback-solved", ".bottom-content-solved", "[data-cy=\"puzzle-solved\"]", "[data-cy=\"puzzle-failed\"]", ".puzzle-feedback-incorrect"], "pendingReason": "Engine help turns on once you have solved or failed this puzzle" }
       ],
       "block": [
-        { "path": "^/(play|live|game/live|game/daily|daily|tournament|arena|puzzles|puzzle-rush|puzzle-battle|variants|lessons/quiz)\\b", "reason": "Live, rated or competitive Chess.com page" }
+        { "path": "^/(play|live|game|daily|tournament|tournaments|arena|puzzles?/(rush|battle)|puzzle-rush|puzzle-battle|variants|votechess)\\b", "reason": "Live, rated or competitive Chess.com page" }
       ],
-      "unsupportedReason": "Only the Chess.com analysis board and games vs the computer are supported"
+      "unsupportedReason": "This Chess.com page has no board MOTH can analyse"
     }
   ]
 }

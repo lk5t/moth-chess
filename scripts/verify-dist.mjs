@@ -40,7 +40,7 @@ for (const site of rules.sites) {
   if (!(m.optional_host_permissions ?? []).includes(site.origin)) errors.push(`fair-play site ${site.id}: ${site.origin} missing from optional_host_permissions`);
   if (!(m.web_accessible_resources?.[0]?.matches ?? []).includes(site.origin)) errors.push(`fair-play site ${site.id}: ${site.origin} missing from web_accessible_resources matches`);
   for (const pat of site.matches) if (!pat.startsWith(site.origin.replace(/\*$/, ''))) errors.push(`fair-play site ${site.id}: match ${pat} is outside ${site.origin}`);
-  for (const r of [...(site.allow ?? []), ...(site.block ?? [])]) { try { new RegExp(r.path); } catch { errors.push(`fair-play site ${site.id}: invalid regex ${r.path}`); } }
+  for (const r of [...(site.allow ?? []), ...(site.review ?? []), ...(site.block ?? [])]) { try { new RegExp(r.path); } catch { errors.push(`fair-play site ${site.id}: invalid regex ${r.path}`); } }
 }
 if (errors.length) {
   console.error('[verify] FAILED:\n  ' + errors.join('\n  '));

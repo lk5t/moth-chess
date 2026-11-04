@@ -55,7 +55,8 @@ test('import → review → coach exercise → dashboard, all local and persiste
   await page.screenshot({ path: 'test-results/workflow-review.png' });
 
   // coach: an exercise was generated from the user's own blunder
-  await page.getByRole('button', { name: 'MOTH Coach', exact: true }).click();
+  await page.getByRole('button', { name: 'Train', exact: true }).click();
+  await page.getByRole('tab', { name: 'Coach', exact: true }).click();
   await expect(page.locator('.stat').filter({ hasText: 'Exercises' }).locator('.v')).not.toHaveText('0');
   await page.getByRole('button', { name: 'Custom session' }).click();
   await expect(page.getByText(/Exercise 1\/1/)).toBeVisible();
@@ -69,13 +70,15 @@ test('import → review → coach exercise → dashboard, all local and persiste
   await page.getByRole('button', { name: 'Finish' }).click();
 
   // dashboard reflects the review and the training attempt
-  await page.getByRole('button', { name: 'Dashboard', exact: true }).click();
+  await page.getByRole('button', { name: 'Library', exact: true }).click();
+  await page.getByRole('tab', { name: 'Progress', exact: true }).click();
   await expect(page.getByText('Games reviewed').locator('..')).toContainText('1');
   await page.screenshot({ path: 'test-results/workflow-dashboard.png' });
 
   // persistence: the game is still in Memory after a reload
   await page.reload();
-  await page.getByRole('button', { name: 'Memory', exact: true }).click();
+  await page.getByRole('button', { name: 'Library', exact: true }).click();
+  await page.getByRole('tab', { name: 'Games', exact: true }).click();
   await expect(page.getByText(/opponent.*me|me.*opponent/).first()).toBeVisible();
   expect(errors).toEqual([]);
 });
@@ -87,7 +90,9 @@ test('What-If simulator explores a variation without modifying the source game',
   await page.getByRole('button', { name: 'Load', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Move Nc6' })).toBeVisible();
   const fenBefore = await page.locator('#moth-fen').getAttribute('placeholder');
-  await page.getByRole('button', { name: 'What-If Simulator', exact: true }).click();
+  await page.getByRole('button', { name: 'Analyze', exact: true }).click();
+  await page.getByRole('button', { name: /More tools/ }).click();
+  await page.getByRole('menuitem', { name: /What-if/ }).click();
   await page.getByRole('button', { name: /Clone current position/ }).click();
   const sandbox = page.getByRole('img', { name: 'Sandbox board' });
   await clickSquare(sandbox, 'f1', 'white');

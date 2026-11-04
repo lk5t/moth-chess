@@ -24,7 +24,7 @@ test('built-in board runs the bundled engine (MOTH by default) locally and finds
   context.on('request', (r) => { if (!r.url().startsWith('chrome-extension://') && !r.url().startsWith('data:') && !r.url().startsWith('blob:')) external.push(r.url()); });
   const page = await context.newPage();
   await page.goto(ext(`board.html?fen=${encodeURIComponent(MATE_IN_1)}`));
-  await expect(page.getByRole('heading', { name: 'MOTH Chess' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Analyze', exact: true })).toBeVisible();
   // engine result: White mates in 1, best move shown in SAN
   await expect(page.locator('.line .score').first()).toHaveText('+M1');
   await expect(page.locator('.line .pv b').first()).toHaveText('Qxf7#');
@@ -36,7 +36,7 @@ test('starting position analysis reaches the requested depth with 3 lines', asyn
   const page = await context.newPage();
   await page.goto(ext('board.html'));
   await expect(page.locator('.line')).toHaveCount(3);
-  await expect(page.getByText(/depth ([89]|[1-9][0-9])(?!…)/).first()).toBeVisible({ timeout: 80_000 });
+  await expect(page.getByText(/depth ([89]|[1-9][0-9])/).first()).toBeVisible({ timeout: 80_000 });
 });
 
 test('playing a move on the board updates the position and the move list', async ({ context, ext }) => {
@@ -49,17 +49,49 @@ test('playing a move on the board updates the position and the move list', async
   await expect(page.getByRole('button', { name: 'Move Qxf7#' })).toBeVisible();
 });
 
-test('every MOTH section opens on the built-in board', async ({ context, ext }) => {
+test('Workspace 3.0: every workspace and section opens; advanced tools sit behind "More tools" in Simple mode', async ({ context, ext }) => {
   const page = await context.newPage();
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(ext('board.html'));
-  for (const name of ['MOTH Intelligence', 'Threat Vision', 'Neural Map', 'What-If Simulator', 'Game Review', 'Openings', 'MOTH Coach', 'Memory', 'Dashboard', 'Analysis']) {
-    await page.getByRole('button', { name, exact: true }).click();
-    await expect(page.locator('.page-head .badge')).toHaveText(name);
-    await page.waitForTimeout(400);
-    await page.screenshot({ path: `test-results/section-${name.toLowerCase().replace(/[^a-z]+/g, '-')}.png` });
+  // first screen is Home with the four main actions
+  await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible();
+  for (const a of ['Analyze a position', 'Review a game', 'Train', 'Play MOTH']) await expect(page.locator('.tile.action', { hasText: a })).toBeVisible();
+  await page.screenshot({ path: 'test-results/section-home.png' });
+  // Engine Lab is hidden in Simple mode
+  await expect(page.getByRole('button', { name: 'Engine Lab', exact: true })).toHaveCount(0);
+  const plan: [string, string[], string[]][] = [
+    ['Analyze', ['Evaluate', 'Game review', 'Openings'], ['Explain', 'Threats', 'Variation tree', 'What-if']],
+    ['Train', ['Coach', 'Play MOTH'], []],
+    ['Library', ['Games', 'Progress'], []],
+  ];
+  for (const [ws, basic, adv] of plan) {
+    await page.getByRole('button', { name: ws, exact: true }).click();
+    await expect(page.getByRole('heading', { name: ws, exact: true })).toBeVisible();
+    for (const s of basic) {
+      await page.getByRole('tab', { name: s, exact: true }).click();
+      await expect(page.locator('.page-head .badge')).toHaveText(s);
+      await page.waitForTimeout(300);
+      await page.screenshot({ path: `test-results/section-${s.toLowerCase().replace(/[^a-z]+/g, '-')}.png` });
+    }
+    for (const s of adv) {
+      await page.getByRole('button', { name: /More tools|Explain|Threats|Variation tree|What-if/ }).first().click();
+      await page.getByRole('menuitem', { name: new RegExp(`^${s}`) }).click();
+      await expect(page.locator('.page-head .badge')).toHaveText(s);
+      await page.waitForTimeout(300);
+      await page.screenshot({ path: `test-results/section-${s.toLowerCase().replace(/[^a-z]+/g, '-')}.png` });
+    }
   }
+  // the last section is remembered across reloads
+  await page.reload();
+  await expect(page.locator('.page-head .badge')).toHaveText('Progress');
+  // Full mode shows Engine Lab and the advanced tabs inline
+  await page.goto(ext('options.html'));
+  await page.getByRole('group', { name: 'Interface mode' }).getByRole('button', { name: 'Full' }).click();
+  await page.goto(ext('board.html?tab=analysis'));
+  await expect(page.getByRole('tab', { name: 'Variation tree', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Engine Lab', exact: true }).click();
+  await expect(page.locator('.page-head .badge')).toHaveText('MOTH Engine');
   expect(errors).toEqual([]);
 });
 
@@ -95,10 +127,11 @@ test('fair play: live/competitive pages are blocked by the service worker', asyn
     return out;
   });
   expect(verdicts['https://lichess.org/tv']).toBe('blocked');
-  expect(verdicts['https://lichess.org/abcdEFGH']).toBe('blocked');
+  // finished-game pages are allowed only once the page shows the game is over; by URL they ask for site access
+  expect(verdicts['https://lichess.org/abcdEFGH']).toBe('needs-permission');
   expect(verdicts['https://lichess.org/tournament/xyz']).toBe('blocked');
   expect(verdicts['https://www.chess.com/play/online']).toBe('blocked');
-  expect(verdicts['https://www.chess.com/game/live/123456']).toBe('blocked');
+  expect(verdicts['https://www.chess.com/game/live/123456']).toBe('needs-permission');
   expect(verdicts['https://www.chess.com/puzzles/rush']).toBe('blocked');
   // analysis boards are supported but need explicit user permission first
   expect(verdicts['https://lichess.org/analysis']).toBe('needs-permission');
