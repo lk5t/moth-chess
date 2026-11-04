@@ -1,0 +1,40 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npx tsc --noEmit -p tsconfig.json
+      - run: npx vitest run
+      - run: npm run build
+      - name: Browser tests
+        run: |
+          npx playwright install --with-deps chromium
+          npx playwright test
+      - name: Package
+        run: |
+          V="${GITHUB_REF_NAME#v}"; MAJMIN="${V%.*}"
+          mkdir -p pkg/moth-chess
+          cp -r dist pkg/moth-chess/moth-chess-dist
+          cp README.md pkg/moth-chess/
+          (cd pkg && zip -qr "../moth-chess-v${MAJMIN}.zip" moth-chess)
+          echo "ZIP=moth-chess-v${MAJMIN}.zip" >> "$GITHUB_ENV"
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          NOTES=".github/release-notes/${GITHUB_REF_NAME}.md"
+          [ -f "$NOTES" ] || NOTES=/dev/null
+          gh release create "$GITHUB_REF_NAME" "$ZIP" --title "MOTH Chess ${GITHUB_REF_NAME}" --notes-file "$NOTES" --verify-tag
