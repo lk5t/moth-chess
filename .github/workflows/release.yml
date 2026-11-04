@@ -28,7 +28,8 @@ jobs:
           else echo "skip=" >> "$GITHUB_OUTPUT"; fi
       - name: Nothing to release
         if: steps.ver.outputs.skip != ''
-        run: echo "Skipping: ${{ steps.ver.outputs.skip }}"
+        run: |
+          echo "Skipping - ${{ steps.ver.outputs.skip }}"
       - uses: actions/setup-node@v4
         if: steps.ver.outputs.skip == ''
         with:
