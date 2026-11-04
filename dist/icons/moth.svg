@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- MOTH Chess — "lumen moth": four flat wings drawn toward a point of light. Original artwork. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#17142a"/>
+      <stop offset="1" stop-color="#0a0912"/>
+    </linearGradient>
+    <linearGradient id="up" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b8a6ff"/>
+      <stop offset="1" stop-color="#6d4dff"/>
+    </linearGradient>
+    <linearGradient id="lo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5a3cf0"/>
+      <stop offset="1" stop-color="#3a2aa8"/>
+    </linearGradient>
+    <radialGradient id="lumen" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffd98a" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#ffd98a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="128" height="128" rx="30" fill="url(#bg)"/>
+  <circle cx="64" cy="26" r="22" fill="url(#lumen)" opacity="0.55"/>
+  <!-- upper wings -->
+  <path d="M61 56 L26 30 Q14 26 15 40 Q17 62 61 66 Z" fill="url(#up)"/>
+  <path d="M67 56 L102 30 Q114 26 113 40 Q111 62 67 66 Z" fill="url(#up)"/>
+  <!-- lower wings -->
+  <path d="M61 70 Q30 72 30 90 Q31 104 46 98 Q58 92 62 76 Z" fill="url(#lo)"/>
+  <path d="M67 70 Q98 72 98 90 Q97 104 82 98 Q70 92 66 76 Z" fill="url(#lo)"/>
+  <!-- body -->
+  <rect x="59.5" y="46" width="9" height="50" rx="4.5" fill="#f3efff"/>
+  <!-- antennae toward the light -->
+  <path d="M61 47 Q58 36 62 28" fill="none" stroke="#f3efff" stroke-width="3" stroke-linecap="round"/>
+  <path d="M67 47 Q70 36 66 28" fill="none" stroke="#f3efff" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="64" cy="22" r="5.5" fill="#ffd98a"/>
+</svg>

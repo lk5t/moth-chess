@@ -1,0 +1,227 @@
+
+[1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90m/home/runner/work/moth-chess/moth-chess[39m
+
+ [32m✓[39m tests/unit/engine.test.ts[2m > [22mUCI parsing[2m > [22mparses a full info line with MultiPV and PV
+ [32m✓[39m tests/unit/engine.test.ts[2m > [22mUCI parsing[2m > [22mparses mate scores and bounds
+ [32m✓[39m tests/unit/engine.test.ts[2m > [22mUCI parsing[2m > [22mhandles wdl, currmove and info string lines
+ [32m✓[39m tests/unit/engine.test.ts[2m > [22mUCI parsing[2m > [22mparses bestmove with/without ponder and (none)
+ [32m✓[39m tests/unit/engine.test.ts[2m > [22mUCI parsing[2m > [22mparses option lines and builds go commands
+ [32m✓[39m tests/unit/engine.test.ts[2m > [22mevaluation normalisation[2m > [22mconverts side-to-move scores to White perspective
+ [32m✓[39m tests/unit/engine.test.ts[2m > [22mevaluation normalisation[2m > [22mkeeps the winner for "mate 0" (side to move is checkmated)
+ [32m✓[39m tests/unit/engine.test.ts[2m > [22mevaluation normalisation[2m > [22mmaps scores to win% monotonically and symmetrically
+ [32m✓[39m tests/unit/engine.test.ts[2m > [22mevaluation normalisation[2m > [22mformats scores
+ [32m✓[39m tests/unit/engine.test.ts[2m > [22mevaluation normalisation[2m > [22mcomputes move accuracy within 0..100, 100 for no loss
+ [32m✓[39m tests/unit/engine.test.ts[2m > [22mengine controller (scripted UCI engine)[2m > [22mperforms the UCI handshake and applies options clamped to engine limits
+ [32m✓[39m tests/unit/engine.test.ts[2m > [22mengine controller (scripted UCI engine)[2m > [22manalyses with MultiPV, converts PVs to SAN and White-perspective scores
+ [32m✓[39m tests/unit/engine.test.ts[2m > [22mengine controller (scripted UCI engine)[2m > [22mrejects stale results: a new search cancels the old one and late output is ignored
+ [32m✓[39m tests/unit/engine.test.ts[2m > [22mengine controller (scripted UCI engine)[2m > [22mserves repeated positions from cache
+ [32m✓[39m tests/unit/engine.test.ts[2m > [22mengine controller (scripted UCI engine)[2m > [22mcancels a specific search
+ [32m✓[39m tests/unit/engine.test.ts[2m > [22mengine controller (scripted UCI engine)[2m > [22mreports checkmate positions without fabricating moves
+ [32m✓[39m tests/unit/engine.test.ts[2m > [22mengine controller (scripted UCI engine)[2m > [22mrestarts after a stall and finishes queued work
+ [32m✓[39m tests/unit/engine.test.ts[2m > [22mengine controller (scripted UCI engine)[2m > [22mrecovers from a crash
+ [32m✓[39m tests/unit/engine.test.ts[2m > [22mengine controller (scripted UCI engine)[2m > [22mterminates the worker after idling and re-initialises lazily
+ [32m✓[39m tests/unit/engine.test.ts[2m > [22mengine controller (scripted UCI engine)[2m > [22mrejects invalid FEN without touching the engine
+ [32m✓[39m tests/unit/engine.test.ts[2m > [22mengine recovery (v2.1)[2m > [22mstops after repeated consecutive crashes instead of looping, and retry() recovers
+ [32m✓[39m tests/unit/engine.test.ts[2m > [22mengine recovery (v2.1)[2m > [22mresets the failure counter after a normal answer
+ [32m✓[39m tests/unit/engine.test.ts[2m > [22mengine recovery (v2.1)[2m > [22mfails fast with a clear message when engine files are missing (no restart loop)
+ [32m✓[39m tests/unit/engine.test.ts[2m > [22mengine recovery (v2.1)[2m > [22mexplains common fatal errors in plain language
+ [32m✓[39m tests/unit/foundation.test.ts[2m > [22msettings migration[2m > [22mkeeps every v2.0 choice and marks tuned engines as a custom profile
+ [32m✓[39m tests/unit/foundation.test.ts[2m > [22msettings migration[2m > [22muntuned v2.0 settings get the Standard profile; fresh installs are not onboarded yet
+ [32m✓[39m tests/unit/foundation.test.ts[2m > [22msettings migration[2m > [22mrecovers from corrupted settings without throwing
+ [32m✓[39m tests/unit/foundation.test.ts[2m > [22msettings migration[2m > [22mis idempotent on current settings
+ [32m✓[39m tests/unit/foundation.test.ts[2m > [22mperformance profiles[2m > [22mapply concrete, ordered resource values
+ [32m✓[39m tests/unit/foundation.test.ts[2m > [22mperformance profiles[2m > [22mthe default settings are the Standard profile
+ [32m✓[39m tests/unit/foundation.test.ts[2m > [22mperformance profiles[2m > [22mswitches to custom when a profile-controlled value is edited by hand, and back when it matches again
+ [32m✓[39m tests/unit/foundation.test.ts[2m > [22mbackup and restore[2m > [22mround-trips settings and data, skipping duplicates
+ [32m✓[39m tests/unit/foundation.test.ts[2m > [22mbackup and restore[2m > [22maccepts 2.0 Memory exports as data-only
+ [32m✓[39m tests/unit/foundation.test.ts[2m > [22mbackup and restore[2m > [22mrejects malformed, foreign and future backups with clear messages
+ [32m✓[39m tests/unit/foundation.test.ts[2m > [22mbackup and restore[2m > [22mrestores the v3 tables (practice, runs) that 2.0 exported but never re-imported
+ [32m✓[39m tests/unit/foundation.test.ts[2m > [22mdiagnostics[2m > [22mredacts URLs, e-mail addresses, IDs and file paths
+ [32m✓[39m tests/unit/foundation.test.ts[2m > [22mdiagnostics[2m > [22mbuilds a report without private data and links an issue only on request
+ [32m✓[39m tests/unit/foundation.test.ts[2m > [22mdiagnostics[2m > [22mkeeps a bounded, folded error log
+ [32m✓[39m tests/unit/foundation.test.ts[2m > [22mHUD placement[2m > [22mleaves a panel alone when it covers nothing
+ [32m✓[39m tests/unit/foundation.test.ts[2m > [22mHUD placement[2m > [22mmoves a panel off the board and the site controls
+ [32m✓[39m tests/unit/foundation.test.ts[2m > [22mHUD placement[2m > [22mflips the eval bar when the preferred side is off-screen
+ [32m✓[39m tests/unit/foundation.test.ts[2m > [22m3.0.1 steady arrows[2m > [22mlocks the arrow at the cap depth and keeps it until the position changes
+ [32m✓[39m tests/unit/foundation.test.ts[2m > [22m3.0.1 steady arrows[2m > [22mmigrates 3.0 settings to one arrow, keeping other HUD choices
+ [32m✓[39m tests/unit/moth-training.test.ts[2m > [22mPGN ingestion[2m > [22mvalidates by replaying, rejects illegal games and contradicting results
+ [32m✓[39m tests/unit/moth-training.test.ts[2m > [22mPGN ingestion[2m > [22mdeduplicates positions across games and keeps whole games in one split
+ [32m✓[39m tests/unit/moth-training.test.ts[2m > [22mPGN ingestion[2m > [22mmines sacrifices (static exchange) and checkmates
+ [32m✓[39m tests/unit/moth-training.test.ts[2m > [22mPGN ingestion[2m > [22mlabels results from the side to move, but never calls a move good because the game was won
+ [32m✓[39m tests/unit/moth-training.test.ts[2m > [22mPGN ingestion[2m > [22maugmentation produces legal, new, off-distribution positions
+ [32m✓[39m tests/unit/moth-training.test.ts[2m > [22mtraining[2m > [22mreal gradient descent: parameters change and loss falls on a learnable signal
+ [32m✓[39m tests/unit/moth-training.test.ts[2m > [22mtraining[2m > [22mis reproducible for a fixed seed
+ [32m✓[39m tests/unit/moth-training.test.ts[2m > [22mtraining[2m > [22mtargets blend teacher and result, and fall back to the teacher for augmented positions
+ [32m✓[39m tests/unit/moth-training.test.ts[2m > [22mself-play and gating[2m > [22mplays complete legal games between configurations
+ [32m✓[39m tests/unit/moth-training.test.ts[2m > [22mself-play and gating[2m > [22mrejects a weaker candidate: a corrupted network loses its benchmark match[33m 1045[2mms[22m[39m
+ [32m✓[39m tests/unit/moth-training.test.ts[2m > [22mself-play and gating[2m > [22mpromotes only on measured improvement in every gate
+ [32m✓[39m tests/unit/moth-training.test.ts[2m > [22mself-play and gating[2m > [22mElo statistics are symmetric and bounded
+ [32m✓[39m tests/unit/moth-training.test.ts[2m > [22mself-play and gating[2m > [22mrollback re-activates an approved model and never a rejected one
+ [32m✓[39m tests/unit/moth-training.test.ts[2m > [22mopening book selection[2m > [22mnever selects an unsound or mistaken move, however popular
+ [32m✓[39m tests/unit/moth-training.test.ts[2m > [22mopening book selection[2m > [22mstyles prefer different sound moves
+ [32m✓[39m tests/unit/moth-training.test.ts[2m > [22mboard recognition verification[2m > [22mverifies a position from the page move list only if it reproduces the board
+ [32m✓[39m tests/unit/moth-training.test.ts[2m > [22mboard recognition verification[2m > [22maccepts a page FEN only when its placement matches the pieces on the board
+ [32m✓[39m tests/unit/moth-training.test.ts[2m > [22mboard recognition verification[2m > [22mreplays SAN with annotations; illegal history yields null
+ [32m✓[39m tests/unit/moth-training.test.ts[2m > [22mpersonal adaptation[2m > [22mbuilds a profile from practice games only
+ [32m✓[39m tests/unit/moth-training.test.ts[2m > [22mpersonal adaptation[2m > [22mturns the profile into training advice only with enough games
+ [32m✓[39m tests/unit/moth-training.test.ts[2m > [22mpersonal adaptation[2m > [22mprepares the lines the user scores badly against (≥2 games, ≤40%)
+ [32m✓[39m tests/unit/moth-training.test.ts[2m > [22mlatency statistics[2m > [22mcomputes nearest-rank percentiles
+ [32m✓[39m tests/unit/integration.test.ts[2m > [22mfair-play restrictions[2m > [22msupports analysis boards and unrated practice
+ [32m✓[39m tests/unit/integration.test.ts[2m > [22mfair-play restrictions[2m > [22mblocks live and rated game pages by URL
+ [32m✓[39m tests/unit/integration.test.ts[2m > [22mfair-play restrictions[2m > [22mblocks an analysis URL when live-game elements (running clocks) are present
+ [32m✓[39m tests/unit/integration.test.ts[2m > [22mfair-play restrictions[2m > [22m3.0: finished games and solved puzzles become analysable only with positive evidence on the page
+ [32m✓[39m tests/unit/integration.test.ts[2m > [22mfair-play restrictions[2m > [22m3.0: timed and competitive modes stay blocked with no way to unlock
+ [32m✓[39m tests/unit/integration.test.ts[2m > [22mfair-play restrictions[2m > [22m3.0: lessons, editor and explorer are allowed
+ [32m✓[39m tests/unit/integration.test.ts[2m > [22mfair-play restrictions[2m > [22mignores unrelated websites and non-https
+ [32m✓[39m tests/unit/integration.test.ts[2m > [22mboard adapters (no guessing of hidden metadata)[2m > [22mreads a FEN from Lichess analysis URLs
+ [32m✓[39m tests/unit/integration.test.ts[2m > [22mboard adapters (no guessing of hidden metadata)[2m > [22minfers side to move only from a visible last-move highlight
+ [32m✓[39m tests/unit/integration.test.ts[2m > [22mboard adapters (no guessing of hidden metadata)[2m > [22mcomposes a FEN and drops castling rights that are impossible on the board
+ [32m✓[39m tests/unit/integration.test.ts[2m > [22mboard adapters (no guessing of hidden metadata)[2m > [22mserialises an empty grid
+ [32m✓[39m tests/unit/integration.test.ts[2m > [22marrow coordinate mapping & board orientation[2m > [22mmaps squares for white orientation
+ [32m✓[39m tests/unit/integration.test.ts[2m > [22marrow coordinate mapping & board orientation[2m > [22mmaps squares for a flipped board
+ [32m✓[39m tests/unit/integration.test.ts[2m > [22marrow coordinate mapping & board orientation[2m > [22mpointToSquare inverts squareCenter in both orientations
+ [32m✓[39m tests/unit/integration.test.ts[2m > [22marrow coordinate mapping & board orientation[2m > [22mdraws knight moves as an L and scales with board size
+ [32m✓[39m tests/unit/integration.test.ts[2m > [22moverlay dragging & resizing[2m > [22mstarts inside the viewport
+ [32m✓[39m tests/unit/integration.test.ts[2m > [22moverlay dragging & resizing[2m > [22mdrags with the pointer and clamps to the viewport
+ [32m✓[39m tests/unit/integration.test.ts[2m > [22moverlay dragging & resizing[2m > [22mresizes with minimum sizes and re-clamps on viewport shrink
+ [32m✓[39m tests/unit/integration.test.ts[2m > [22msettings validation[2m > [22mrepairs corrupt stored settings
+ [32m✓[39m tests/unit/integration.test.ts[2m > [22msettings validation[2m > [22mdefaults match the specification
+ [32m✓[39m tests/unit/integration.test.ts[2m > [22msettings validation[2m > [22mdeep-merges patches
+ [32m✓[39m tests/unit/review-coach.test.ts[2m > [22mmove classification[2m > [22mapplies the documented win%-drop thresholds
+ [32m✓[39m tests/unit/review-coach.test.ts[2m > [22mgame review[2m > [22mevaluates every position and classifies the blunder
+ [32m✓[39m tests/unit/review-coach.test.ts[2m > [22mgame review[2m > [22mis cancellable and resumable without recomputing finished positions
+ [32m✓[39m tests/unit/review-coach.test.ts[2m > [22mgame review[2m > [22mstops instead of fabricating when the engine returns no line
+ [32m✓[39m tests/unit/review-coach.test.ts[2m > [22mgame review[2m > [22mexports annotated PGN with NAGs and eval comments
+ [32m✓[39m tests/unit/review-coach.test.ts[2m > [22mMOTH Coach[2m > [22mcreates exercises only from the user’s own mistakes
+ [32m✓[39m tests/unit/review-coach.test.ts[2m > [22mMOTH Coach[2m > [22mvalidates moves: correct, near-equal alternative, game mistake, illegal
+ [32m✓[39m tests/unit/review-coach.test.ts[2m > [22mMOTH Coach[2m > [22mdetects tactical motifs from verified geometry
+ [32m✓[39m tests/unit/review-coach.test.ts[2m > [22mMOTH Coach[2m > [22mschedules with spaced repetition and builds due sessions
+ [32m✓[39m tests/unit/review-coach.test.ts[2m > [22mMOTH Coach[2m > [22mrefuses to draw conclusions from insufficient data
+ [32m✓[39m tests/unit/review-coach.test.ts[2m > [22mPerformance Dashboard[2m > [22mcomputes explainable metrics with sample sizes and low-confidence flags
+ [32m✓[39m tests/unit/review-coach.test.ts[2m > [22mPerformance Dashboard[2m > [22mfilters by colour, result, opening and date
+ [32m✓[39m tests/unit/review-coach.test.ts[2m > [22mPerformance Dashboard[2m > [22mreturns nulls (not invented numbers) when there is no data
+ [32m✓[39m tests/unit/v3.test.ts[2m > [22mendgame: exact KPK table[2m > [22mknows the opposition[33m 632[2mms[22m[39m
+ [32m✓[39m tests/unit/v3.test.ts[2m > [22mendgame: exact KPK table[2m > [22mdraws rook pawns when the defender holds the corner, wins far-away pawns
+ [32m✓[39m tests/unit/v3.test.ts[2m > [22mendgame: exact KPK table[2m > [22mis colour- and mirror-symmetric
+ [32m✓[39m tests/unit/v3.test.ts[2m > [22mendgame: exact KPK table[2m > [22mbuilds the table quickly
+ [32m✓[39m tests/unit/v3.test.ts[2m > [22mendgame classification[2m > [22mclassifies and explains
+ [32m✓[39m tests/unit/v3.test.ts[2m > [22mendgame classification[2m > [22mapplies the rule of the square in pawn races
+ [32m✓[39m tests/unit/v3.test.ts[2m > [22mendgame classification[2m > [22mevery training position is legal, and KPK drills match the exact table
+ [32m✓[39m tests/unit/v3.test.ts[2m > [22msmart game report[2m > [22mfinds critical moments, missed chances and strong moves from measured swings only
+ [32m✓[39m tests/unit/v3.test.ts[2m > [22madaptive training and Player DNA[2m > [22madapts endgame level: up after two successes, down after two failures
+ [32m✓[39m tests/unit/v3.test.ts[2m > [22madaptive training and Player DNA[2m > [22mschedules repertoire lines with Leitner boxes and asks only the user's moves
+ [32m✓[39m tests/unit/v3.test.ts[2m > [22madaptive training and Player DNA[2m > [22msaves repertoire lines without duplicates
+ [32m✓[39m tests/unit/v3.test.ts[2m > [22madaptive training and Player DNA[2m > [22mcomputes DNA only from stored data and recommends with reasons
+ [32m✓[39m tests/unit/v3.test.ts[2m > [22mupdates[2m > [22mcompares versions numerically
+ [32m✓[39m tests/unit/v3.test.ts[2m > [22mupdates[2m > [22mchecks GitHub at most once a day and never installs anything
+ [32m✓[39m tests/unit/v3.test.ts[2m > [22mupdates[2m > [22mrecords upgrades for the "what's new" notice
+ [32m✓[39m tests/unit/v3.test.ts[2m > [22mopening explorer helpers[2m > [22mgives family plans and a generic fallback
+ [32m✓[39m tests/unit/v3.test.ts[2m > [22mopening explorer helpers[2m > [22mdrill moves used in tests are legal
+ [32m✓[39m tests/unit/memory.test.ts[2m > [22mgames[2m > [22mimports multi-game PGN, detects duplicates, opening and user colour
+ [32m✓[39m tests/unit/memory.test.ts[2m > [22mgames[2m > [22mreports per-game errors without aborting the batch
+ [32m✓[39m tests/unit/memory.test.ts[2m > [22mgames[2m > [22mlinks positions to games that reached them (indexed)
+ [32m✓[39m tests/unit/memory.test.ts[2m > [22mgames[2m > [22mexports PGN
+ [32m✓[39m tests/unit/memory.test.ts[2m > [22mpositions, tags, folders, favourites, search[2m > [22mdetects duplicate positions by position key
+ [32m✓[39m tests/unit/memory.test.ts[2m > [22mpositions, tags, folders, favourites, search[2m > [22msearches with text, tag, favourite and folder filters and paginates
+ [32m✓[39m tests/unit/memory.test.ts[2m > [22mpositions, tags, folders, favourites, search[2m > [22mstores annotations, favourite openings, trees and lists recent items
+ [32m✓[39m tests/unit/memory.test.ts[2m > [22mexport / import / clear[2m > [22mround-trips everything and skips duplicates on re-import
+ [32m✓[39m tests/unit/memory.test.ts[2m > [22mexport / import / clear[2m > [22mrejects foreign files
+ [32m✓[39m tests/unit/memory.test.ts[2m > [22mexport / import / clear[2m > [22mclears selected tables only
+ [32m✓[39m tests/unit/memory.test.ts[2m > [22mdatabase migrations[2m > [22mupgrades a v1 database to v2 and backfills new fields
+ [32m✓[39m tests/unit/memory.test.ts[2m > [22m3.0 schema v4 migration keeps 2.x data[2m > [22mopens a v3 database with data and adds the 3.0 tables without touching existing rows
+ [32m✓[39m tests/unit/analysis.test.ts[2m > [22mboard geometry[2m > [22mcomputes material and phase
+ [32m✓[39m tests/unit/analysis.test.ts[2m > [22mboard geometry[2m > [22mstatic exchange: undefended piece is a full win, defended equal trade is 0
+ [32m✓[39m tests/unit/analysis.test.ts[2m > [22mboard geometry[2m > [22mfinds hanging pieces (attacked by a lesser piece)
+ [32m✓[39m tests/unit/analysis.test.ts[2m > [22mboard geometry[2m > [22mdetects absolute pins and skewers
+ [32m✓[39m tests/unit/analysis.test.ts[2m > [22mboard geometry[2m > [22mlists attackers
+ [32m✓[39m tests/unit/analysis.test.ts[2m > [22mThreat Vision[2m > [22mfinds a knight fork of king and rook (Nc7+)
+ [32m✓[39m tests/unit/analysis.test.ts[2m > [22mThreat Vision[2m > [22mmarks a fork engine-validated when it is among Stockfish’s top lines
+ [32m✓[39m tests/unit/analysis.test.ts[2m > [22mThreat Vision[2m > [22mlists checks (with mate) and defensive responses when in check
+ [32m✓[39m tests/unit/analysis.test.ts[2m > [22mThreat Vision[2m > [22mfinds material the side to move can win and what the opponent threatens
+ [32m✓[39m tests/unit/analysis.test.ts[2m > [22mThreat Vision[2m > [22mbuilds toggleable board layers
+ [32m✓[39m tests/unit/analysis.test.ts[2m > [22mMOTH Intelligence[2m > [22mcomputes verified features for the start position
+ [32m✓[39m tests/unit/analysis.test.ts[2m > [22mMOTH Intelligence[2m > [22mexplains a developing move and compares candidates, tagging sources
+ [32m✓[39m tests/unit/analysis.test.ts[2m > [22mMOTH Intelligence[2m > [22mnever claims engine-proven insights when no engine result is available
+ [32m✓[39m tests/unit/analysis.test.ts[2m > [22mMOTH Intelligence[2m > [22mignores engine results that belong to another position
+ [32m✓[39m tests/unit/analysis.test.ts[2m > [22mMOTH Intelligence[2m > [22mdetects a hanging piece and endgame principles
+ [32m✓[39m tests/unit/analysis.test.ts[2m > [22mMOTH Intelligence[2m > [22mreports checkmate by the rules
+ [32m✓[39m tests/unit/analysis.test.ts[2m > [22mMOTH Intelligence[2m > [22mhas a pluggable provider registry with an always-available heuristic provider
+ [32m✓[39m tests/unit/analysis.test.ts[2m > [22mMOTH Intelligence[2m > [22mcompares candidates against a forced mate without centipawn nonsense
+ [32m✓[39m tests/unit/chess.test.ts[2m > [22mFEN parsing[2m > [22maccepts the start position and normalises whitespace
+ [32m✓[39m tests/unit/chess.test.ts[2m > [22mFEN parsing[2m > [22mfills missing move counters for 4-field EPD
+ [32m✓[39m tests/unit/chess.test.ts[2m > [22mFEN parsing[2m > [22mrejects malformed FENs with a reason
+ [32m✓[39m tests/unit/chess.test.ts[2m > [22mFEN parsing[2m > [22mrejects positions where the side NOT to move is in check
+ [32m✓[39m tests/unit/chess.test.ts[2m > [22mlegal moves[2m > [22mhas 20 moves from the start
+ [32m✓[39m tests/unit/chess.test.ts[2m > [22mlegal moves[2m > [22mapplies UCI and SAN, returns null for illegal moves
+ [32m✓[39m tests/unit/chess.test.ts[2m > [22mlegal moves[2m > [22msupports castling both sides
+ [32m✓[39m tests/unit/chess.test.ts[2m > [22mlegal moves[2m > [22msupports en passant
+ [32m✓[39m tests/unit/chess.test.ts[2m > [22mlegal moves[2m > [22msupports promotions and under-promotions
+ [32m✓[39m tests/unit/chess.test.ts[2m > [22mlegal moves[2m > [22mconverts a UCI PV to SAN and stops at the first illegal move (stale PV protection)
+ [32m✓[39m tests/unit/chess.test.ts[2m > [22mgame status[2m > [22mdetects checkmate (fool’s mate)
+ [32m✓[39m tests/unit/chess.test.ts[2m > [22mgame status[2m > [22mdetects stalemate
+ [32m✓[39m tests/unit/chess.test.ts[2m > [22mgame status[2m > [22mdetects insufficient material and the fifty-move rule
+ [32m✓[39m tests/unit/chess.test.ts[2m > [22mgame status[2m > [22mdetects threefold repetition from history
+ [32m✓[39m tests/unit/chess.test.ts[2m > [22mposition identity[2m > [22mignores an en-passant square that cannot be used
+ [32m✓[39m tests/unit/chess.test.ts[2m > [22mposition identity[2m > [22mkeeps a usable en-passant square
+ [32m✓[39m tests/unit/chess.test.ts[2m > [22mposition identity[2m > [22mflipTurn clears ep
+ [32m✓[39m tests/unit/chess.test.ts[2m > [22mPGN[2m > [22mparses headers, moves (ignoring comments/variations/NAGs) and result
+ [32m✓[39m tests/unit/chess.test.ts[2m > [22mPGN[2m > [22msupports a FEN start position
+ [32m✓[39m tests/unit/chess.test.ts[2m > [22mPGN[2m > [22mthrows on illegal PGN
+ [32m✓[39m tests/unit/chess.test.ts[2m > [22mPGN[2m > [22msplits multi-game files
+ [32m✓[39m tests/unit/chess.test.ts[2m > [22mPGN[2m > [22mround-trips through buildPgn
+ [32m✓[39m tests/unit/chess.test.ts[2m > [22mPGN[2m > [22mwrites black-to-move starts with "N..."
+ [32m✓[39m tests/unit/features.test.ts[2m > [22mNeural Map[2m > [22mbuilds a branching graph from lines
+ [32m✓[39m tests/unit/features.test.ts[2m > [22mNeural Map[2m > [22mshares nodes for transpositions while keeping both move histories
+ [32m✓[39m tests/unit/features.test.ts[2m > [22mNeural Map[2m > [22mnavigates to any node via the shortest path
+ [32m✓[39m tests/unit/features.test.ts[2m > [22mNeural Map[2m > [22mstops at illegal moves, collapses branches and keeps the deepest eval
+ [32m✓[39m tests/unit/features.test.ts[2m > [22mNeural Map[2m > [22mlays out nodes without overlap
+ [32m✓[39m tests/unit/features.test.ts[2m > [22mNeural Map[2m > [22mcomputes evaluation swings from the mover’s perspective
+ [32m✓[39m tests/unit/features.test.ts[2m > [22mWhat-If Simulator isolation[2m > [22mnever modifies the base position and is immutable
+ [32m✓[39m tests/unit/features.test.ts[2m > [22mWhat-If Simulator isolation[2m > [22menforces turn order and legality for either side
+ [32m✓[39m tests/unit/features.test.ts[2m > [22mWhat-If Simulator isolation[2m > [22msteps, truncates future moves on a new branch, and resets
+ [32m✓[39m tests/unit/features.test.ts[2m > [22mWhat-If Simulator isolation[2m > [22mreports changed squares and exports PGN with the base FEN
+ [32m✓[39m tests/unit/features.test.ts[2m > [22mopening recognition[2m > [22mevery database line is legal
+ [32m✓[39m tests/unit/features.test.ts[2m > [22mopening recognition[2m > [22mrecognises the Najdorf with its ECO code
+ [32m✓[39m tests/unit/features.test.ts[2m > [22mopening recognition[2m > [22mhandles move-order transpositions (position-based)
+ [32m✓[39m tests/unit/features.test.ts[2m > [22mopening recognition[2m > [22mlists book continuations and searches the database
+ [32m✓[39m tests/unit/stockfish.test.ts[2m > [22mreal Stockfish WASM[2m > [22minitialises and reports a name
+ [32m✓[39m tests/unit/stockfish.test.ts[2m > [22mreal Stockfish WASM[2m > [22mfinds mate in one (back-rank)
+ [32m✓[39m tests/unit/stockfish.test.ts[2m > [22mreal Stockfish WASM[2m > [22mreturns three distinct principal variations with MultiPV 3[33m 370[2mms[22m[39m
+ [32m✓[39m tests/unit/stockfish.test.ts[2m > [22mreal Stockfish WASM[2m > [22msees that a hanging queen should be taken[33m 313[2mms[22m[39m
+ [32m✓[39m tests/unit/moth-engine.test.ts[2m > [22mmove generation (perft)[2m > [22mstartpos matches reference counts
+ [32m✓[39m tests/unit/moth-engine.test.ts[2m > [22mmove generation (perft)[2m > [22mkiwipete matches reference counts
+ [32m✓[39m tests/unit/moth-engine.test.ts[2m > [22mmove generation (perft)[2m > [22mposition3 (en passant, pins) matches reference counts
+ [32m✓[39m tests/unit/moth-engine.test.ts[2m > [22mmove generation (perft)[2m > [22mposition4 (promotions, castling) matches reference counts
+ [32m✓[39m tests/unit/moth-engine.test.ts[2m > [22mmove generation (perft)[2m > [22mposition5 matches reference counts
+ [32m✓[39m tests/unit/moth-engine.test.ts[2m > [22mmove generation (perft)[2m > [22mposition6 matches reference counts
+ [32m✓[39m tests/unit/moth-engine.test.ts[2m > [22mrules[2m > [22mcastling both sides, and not through check
+ [32m✓[39m tests/unit/moth-engine.test.ts[2m > [22mrules[2m > [22men passant only when legal, and canonical e.p. square
+ [32m✓[39m tests/unit/moth-engine.test.ts[2m > [22mrules[2m > [22mpromotion to all four pieces in UCI and SAN
+ [32m✓[39m tests/unit/moth-engine.test.ts[2m > [22mrules[2m > [22mcheckmate, stalemate, insufficient material, fifty moves, repetition
+ [32m✓[39m tests/unit/moth-engine.test.ts[2m > [22mrules[2m > [22mrejects illegal FENs and illegal moves
+ [32m✓[39m tests/unit/moth-engine.test.ts[2m > [22mrules[2m > [22mtolerates over-disambiguated SAN only when unique
+ [32m✓[39m tests/unit/moth-engine.test.ts[2m > [22msearch[2m > [22mfinds quick mates and returns mate scores
+ [32m✓[39m tests/unit/moth-engine.test.ts[2m > [22msearch[2m > [22msolves classic tactics (Win At Chess) including a queen sacrifice[33m 3799[2mms[22m[39m
+ [32m✓[39m tests/unit/moth-engine.test.ts[2m > [22msearch[2m > [22mexamines defensive replies before accepting a sacrifice[33m 802[2mms[22m[39m
+ [32m✓[39m tests/unit/moth-engine.test.ts[2m > [22msearch[2m > [22mMultiPV returns distinct root moves ordered by score
+ [32m✓[39m tests/unit/moth-engine.test.ts[2m > [22msearch[2m > [22mrespects deadlines and always returns a legal move, even at 1 ms[33m 524[2mms[22m[39m
+ [32m✓[39m tests/unit/moth-engine.test.ts[2m > [22mstyles[2m > [22mreport correct mate scores in every style (mate-in-2 puzzles)
+ [32m✓[39m tests/unit/moth-engine.test.ts[2m > [22mstyles[2m > [22mnever override a forced win: all styles find the same mate
+ [32m✓[39m tests/unit/moth-engine.test.ts[2m > [22mstyles[2m > [22monly choose between moves the search considers close[33m 1235[2mms[22m[39m
+ [32m✓[39m tests/unit/moth-engine.test.ts[2m > [22mstyles[2m > [22mchange evaluation emphasis (aggressive values king attack, defensive values shelter)
+ [32m✓[39m tests/unit/moth-engine.test.ts[2m > [22mNNUE evaluation[2m > [22mincremental accumulator updates equal a fresh computation, and match the trainer
+ [32m✓[39m tests/unit/moth-engine.test.ts[2m > [22mNNUE evaluation[2m > [22mmodel files round-trip (from Node Buffers too)
+ [32m✓[39m tests/unit/moth-engine.test.ts[2m > [22mUCI front end[2m > [22mhandshake advertises MOTH options
+ [32m✓[39m tests/unit/moth-engine.test.ts[2m > [22mUCI front end[2m > [22mgo movetime answers within budget; repeat answers from the cache
+ [32m✓[39m tests/unit/moth-engine.test.ts[2m > [22mUCI front end[2m > [22mgo infinite stops promptly on stop[33m 472[2mms[22m[39m
+ [32m✓[39m tests/unit/moth-engine.test.ts[2m > [22mUCI front end[2m > [22mponder → ponderhit answers quickly[33m 606[2mms[22m[39m
+ [32m✓[39m tests/unit/moth-engine.test.ts[2m > [22mUCI front end[2m > [22mopening book: engine-sound moves only, popularity never overrides soundness
+ [32m✓[39m tests/unit/moth-engine.test.ts[2m > [22mUCI front end[2m > [22mPrepare (personal adaptation) steers the choice among sound book moves
+ [32m✓[39m tests/unit/moth-engine.test.ts[2m > [22mUCI front end[2m > [22millegal input never reaches the search; no-move positions answer (none)
+ [32m✓[39m tests/unit/moth-engine.test.ts[2m > [22mUCI front end[2m > [22mreduced skill still plays legal moves
+
+[2m Test Files [22m [1m[32m12 passed[39m[22m[90m (12)[39m
+[2m      Tests [22m [1m[32m218 passed[39m[22m[90m (218)[39m
+[2m   Start at [22m 10:45:24
+[2m   Duration [22m 8.26s[2m (transform 913ms, setup 373ms, collect 1.86s, tests 14.10s, environment 2ms, prepare 909ms)[22m
+

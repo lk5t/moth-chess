@@ -1,0 +1,14 @@
+{
+ "homeVisibleMs": 350,
+ "mothFirstLineMs": 505,
+ "mothDepth10Ms": 1373,
+ "stockfishFirstLineMs": 1009,
+ "stockfishDepth10Ms": 1021,
+ "cachedRevisitMs": 227,
+ "heapMb": {
+  "first": 4.1,
+  "afterNavigation": 6.4,
+  "afterReloads": 5.6
+ },
+ "idleShutdownMs": 10454
+}

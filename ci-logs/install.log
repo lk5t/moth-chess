@@ -1,0 +1,8 @@
+
+> moth-chess@3.0.1 postinstall
+> node scripts/copy-engine.mjs
+
+[copy-engine] src/stockfish-17.1-lite-single-03e3232.js → public/engines/stockfish.{js,wasm} (stockfish@17.1.0)
+
+added 119 packages in 12s
+exit=0

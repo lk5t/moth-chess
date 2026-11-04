@@ -1,0 +1,42 @@
+
+Running kernel seems to be up-to-date.
+
+Restarting services...
+
+Service restarts being deferred:
+ systemctl restart hosted-compute-agent.service
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+Ubuntu clang version 21.1.8 (6ubuntu1)
+built /tmp/moth-ci.wasm (51396 bytes)
+ok   startpos d1 20
+ok   startpos d2 400
+ok   startpos d3 8902
+ok   startpos d4 197281
+ok   startpos d5 4865609
+ok   kiwipete d1 48
+ok   kiwipete d2 2039
+ok   kiwipete d3 97862
+ok   kiwipete d4 4085603
+ok   position3 d1 14
+ok   position3 d2 191
+ok   position3 d3 2812
+ok   position3 d4 43238
+ok   position3 d5 674624
+ok   position4 d1 6
+ok   position4 d2 264
+ok   position4 d3 9467
+ok   position4 d4 422333
+ok   position5 d1 44
+ok   position5 d2 1486
+ok   position5 d3 62379
+ok   position5 d4 2103487
+ok   position6 d1 46
+ok   position6 d2 2079
+ok   position6 d3 89890
+ok   position6 d4 3894594
+all perft counts correct — 16564718 nodes in 622 ms (26.6 Mnps)

@@ -1,0 +1,7 @@
+{
+  "name": "Stockfish",
+  "package": "stockfish@17.1.0",
+  "source": "src/stockfish-17.1-lite-single-03e3232.js",
+  "build": "lite single-threaded WASM",
+  "license": "GPL-3.0"
+}

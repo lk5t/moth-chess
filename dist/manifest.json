@@ -1,0 +1,78 @@
+{
+  "manifest_version": 3,
+  "name": "MOTH Chess",
+  "short_name": "MOTH Chess",
+  "version": "3.0.1",
+  "description": "Local chess analysis and training with the original MOTH Engine and Stockfish \u2014 on-board suggestions on analysis boards, offline play, coaching. Never runs in live games.",
+  "minimum_chrome_version": "110",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_title": "MOTH Chess",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "options_page": "options.html",
+  "permissions": [
+    "storage",
+    "unlimitedStorage",
+    "scripting",
+    "activeTab",
+    "notifications"
+  ],
+  "optional_host_permissions": [
+    "https://lichess.org/*",
+    "https://www.chess.com/*"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "overlay.html",
+        "assets/*",
+        "engines/*",
+        "icons/*",
+        "moth-worker.js",
+        "moth-engine/*"
+      ],
+      "matches": [
+        "https://lichess.org/*",
+        "https://www.chess.com/*"
+      ]
+    }
+  ],
+  "commands": {
+    "toggle-overlay": {
+      "suggested_key": {
+        "default": "Alt+Shift+M"
+      },
+      "description": "Show / hide the MOTH overlay on a supported analysis page"
+    },
+    "toggle-analysis": {
+      "suggested_key": {
+        "default": "Alt+Shift+A"
+      },
+      "description": "Start / stop engine analysis"
+    },
+    "open-board": {
+      "suggested_key": {
+        "default": "Alt+Shift+B"
+      },
+      "description": "Open the MOTH analysis board"
+    }
+  }
+}

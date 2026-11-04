@@ -1,0 +1,28 @@
+Brave Browser 156.1.98.63 
+
+Running 22 tests using 1 worker
+
+  ✓   1 tests/e2e/extension.spec.ts:6:1 › service worker boots and the manifest is the MOTH MV3 manifest (554ms)
+  ✓   2 tests/e2e/extension.spec.ts:15:1 › popup renders with enable switch and board launcher (882ms)
+  ✓   3 tests/e2e/extension.spec.ts:22:1 › built-in board runs the bundled engine (MOTH by default) locally and finds mate in one (1.4s)
+  ✓   4 tests/e2e/extension.spec.ts:35:1 › starting position analysis reaches the requested depth with 3 lines (1.7s)
+  ✓   5 tests/e2e/extension.spec.ts:42:1 › playing a move on the board updates the position and the move list (1.4s)
+  ✓   6 tests/e2e/extension.spec.ts:52:1 › Workspace 3.0: every workspace and section opens; advanced tools sit behind "More tools" in Simple mode (7.8s)
+  ✓   7 tests/e2e/extension.spec.ts:100:1 › settings persist across reloads (chrome.storage.local) (1.6s)
+  ✓   8 tests/e2e/extension.spec.ts:118:1 › fair play: live/competitive pages are blocked by the service worker (844ms)
+  ✓   9 tests/e2e/extension.spec.ts:145:1 › no content script is registered before the user grants site access (584ms)
+  ✓  10 tests/e2e/missing-assets.spec.ts:24:1 › missing MOTH Engine binary: clear message, no restart loop, Stockfish still works (2.5s)
+  ✓  11 tests/e2e/missing-assets.spec.ts:38:1 › missing network model: MOTH falls back to its classical evaluation and still analyses (1.4s)
+  ✓  12 tests/e2e/missing-assets.spec.ts:51:1 › corrupted settings are repaired on start-up without losing the extension (1.5s)
+  ✓  13 tests/e2e/overlay.spec.ts:64:1 › overlay appears on a supported analysis page, reads the board and shows local engine lines (1.5s)
+  ✓  14 tests/e2e/overlay.spec.ts:76:1 › arrows layer never intercepts clicks on the site board (1.2s)
+  ✓  15 tests/e2e/overlay.spec.ts:89:1 › fair play: overlay tears itself down as soon as a live clock appears (1.1s)
+  ✓  16 tests/e2e/overlay.spec.ts:98:1 › fair play: overlay never starts on an analysis URL that shows a running clock (3.9s)
+  ✓  17 tests/e2e/overlay.spec.ts:105:1 › no assistance on a game page that is still in progress, even with host access (3.8s)
+  ✓  18 tests/e2e/overlay.spec.ts:112:1 › 3.0: a finished game becomes analysable; MOTH waits in standby until then and leaves when a clock runs (3.3s)
+  ✓  19 tests/e2e/play.spec.ts:13:1 › play a timed game as White: MOTH answers with real moves, clocks run, resign saves the game (1.6s)
+  ✓  20 tests/e2e/play.spec.ts:41:1 › play as Black: MOTH moves first, and pondering answers your expected reply quickly (1.6s)
+  ✓  21 tests/e2e/play.spec.ts:60:1 › engine switching: the same position analysed by MOTH and by Stockfish (2.2s)
+  ✓  22 tests/e2e/play.spec.ts:75:1 › MOTH Engine dashboard shows measured data: models, statuses, latency, opening knowledge (1.1s)
+
+  22 passed (44.0s)

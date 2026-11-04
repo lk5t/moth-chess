@@ -1,0 +1,10 @@
+
+> moth-chess@3.0.1 build
+> node scripts/build.mjs
+
+[build] pass 1/4: extension pages
+[build] pass 2/4: content script
+[build] pass 3/4: background service worker
+[build] pass 4/4: MOTH Engine worker
+[verify] dist OK — MOTH Chess v3.0.1, MV3, engine + pages present
+[build] done → dist/ is ready for brave://extensions → Load unpacked

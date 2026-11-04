@@ -1,0 +1,226 @@
+{
+  "format": "moth-registry-1",
+  "active": "moth-nn-2.0.4-1b724dd4",
+  "models": [
+    {
+      "id": "moth-nn-2.0.1-1ea156d6",
+      "version": "2.0.1",
+      "file": "moth-nn-2.0.1-1ea156d6.mothnn",
+      "status": "rejected",
+      "parent": "classical",
+      "createdAt": 1793774454716,
+      "summary": {
+        "valLoss": 0.023103715352584507,
+        "valLossParent": 0.025025242056338947,
+        "match": {
+          "games": 200,
+          "wins": 49,
+          "draws": 31,
+          "losses": 120,
+          "score": 0.3225,
+          "elo": -129,
+          "eloError": 47.1,
+          "los": 2.3657710679358956e-08,
+          "vs": "classical"
+        },
+        "tactics": {
+          "solved": 219,
+          "total": 235
+        },
+        "parentTactics": {
+          "solved": 216,
+          "total": 235
+        },
+        "data": {
+          "humanGames": 24000,
+          "selfPlayGames": 160,
+          "trainPositions": 107173,
+          "valPositions": 11518,
+          "datasetHash": "e95aa416",
+          "teacher": "Stockfish 17.1 lite depth 8"
+        }
+      },
+      "reasons": [
+        "validation loss improved 7.68%",
+        "match 32.3% (LOS 0%) vs classical: not a measurable improvement",
+        "tactics 219/235 (parent 216)"
+      ]
+    },
+    {
+      "id": "moth-nn-2.0.2-81be99c4",
+      "version": "2.0.2",
+      "file": "moth-nn-2.0.2-81be99c4.mothnn",
+      "status": "rejected",
+      "parent": "classical",
+      "createdAt": 1793774778901,
+      "summary": {
+        "valLoss": 0.023253638796562164,
+        "valLossParent": 0.02591452648620484,
+        "match": {
+          "games": 200,
+          "wins": 36,
+          "draws": 25,
+          "losses": 139,
+          "score": 0.2425,
+          "elo": -197.9,
+          "eloError": 51.9,
+          "los": 3.497202527569243e-15,
+          "vs": "classical"
+        },
+        "tactics": {
+          "solved": 217,
+          "total": 235
+        },
+        "parentTactics": {
+          "solved": 216,
+          "total": 235
+        },
+        "data": {
+          "humanGames": 24000,
+          "selfPlayGames": 160,
+          "trainPositions": 146948,
+          "valPositions": 15983,
+          "datasetHash": "e81146ee",
+          "teacher": "Stockfish 17.1 lite depth 8"
+        }
+      },
+      "reasons": [
+        "validation loss improved 10.27%",
+        "match 24.3% (LOS 0%) vs classical: not a measurable improvement",
+        "tactics 217/235 (parent 216)"
+      ]
+    },
+    {
+      "id": "moth-nn-2.0.3-b8bbc754",
+      "version": "2.0.3",
+      "file": "moth-nn-2.0.3-b8bbc754.mothnn",
+      "status": "rejected",
+      "parent": "classical",
+      "createdAt": 1793775184560,
+      "summary": {
+        "valLoss": 0.016546704779671496,
+        "valLossParent": 0.016828888595603535,
+        "match": {
+          "games": 200,
+          "wins": 85,
+          "draws": 38,
+          "losses": 77,
+          "score": 0.52,
+          "elo": 13.9,
+          "eloError": 43.6,
+          "los": 0.7351747220424956,
+          "vs": "classical"
+        },
+        "tactics": {
+          "solved": 219,
+          "total": 235
+        },
+        "parentTactics": {
+          "solved": 216,
+          "total": 235
+        },
+        "data": {
+          "humanGames": 24000,
+          "selfPlayGames": 160,
+          "trainPositions": 95384,
+          "valPositions": 10595,
+          "datasetHash": "91481368",
+          "teacher": "Stockfish 17.1 lite depth 8"
+        }
+      },
+      "reasons": [
+        "validation loss improved 1.68%",
+        "match 52.0% (LOS 74%) vs classical: not a measurable improvement",
+        "tactics 219/235 (parent 216)"
+      ]
+    },
+    {
+      "id": "moth-nn-2.0.4-1b724dd4",
+      "version": "2.0.4",
+      "file": "moth-nn-2.0.4-1b724dd4.mothnn",
+      "status": "approved",
+      "parent": "classical",
+      "createdAt": 1793775917937,
+      "summary": {
+        "valLoss": 0.015838393822653382,
+        "valLossParent": 0.016406431798808855,
+        "match": {
+          "games": 400,
+          "wins": 166,
+          "draws": 94,
+          "losses": 140,
+          "score": 0.5325,
+          "elo": 22.6,
+          "eloError": 29.9,
+          "los": 0.9314028585245845,
+          "vs": "classical"
+        },
+        "tactics": {
+          "solved": 216,
+          "total": 235
+        },
+        "parentTactics": {
+          "solved": 216,
+          "total": 235
+        },
+        "data": {
+          "humanGames": 24000,
+          "selfPlayGames": 240,
+          "trainPositions": 230772,
+          "valPositions": 25097,
+          "datasetHash": "50e90dec",
+          "teacher": "Stockfish 17.1 lite depth 8"
+        }
+      },
+      "reasons": [
+        "validation loss improved 3.46%",
+        "match 53.3%, Elo +22.6 \u00b1 29.9, LOS 93%",
+        "tactics 216/235 (parent 216)"
+      ]
+    },
+    {
+      "id": "moth-nn-2.0.5-36a78b65",
+      "version": "2.0.5",
+      "file": "moth-nn-2.0.5-36a78b65.mothnn",
+      "status": "rejected",
+      "parent": "moth-nn-2.0.4-1b724dd4",
+      "createdAt": 1793776454670,
+      "summary": {
+        "valLoss": 0.015758042616605034,
+        "valLossParent": 0.01578200307435095,
+        "match": {
+          "games": 400,
+          "wins": 136,
+          "draws": 99,
+          "losses": 165,
+          "score": 0.46375,
+          "elo": -25.2,
+          "eloError": 29.7,
+          "los": 0.04730827929493342,
+          "vs": "moth-nn-2.0.4-1b724dd4"
+        },
+        "tactics": {
+          "solved": 219,
+          "total": 235
+        },
+        "parentTactics": {
+          "solved": 216,
+          "total": 235
+        },
+        "data": {
+          "humanGames": 24000,
+          "selfPlayGames": 300,
+          "trainPositions": 231455,
+          "valPositions": 25394,
+          "datasetHash": "39e3cc0d",
+          "teacher": "Stockfish 17.1 lite depth 8"
+        }
+      },
+      "reasons": [
+        "validation loss 0.01576 vs parent 0.01578 (0.15%, need \u2265 0.2%)",
+        "match 46.4% (LOS 5%) vs moth-nn-2.0.4-1b724dd4: not a measurable improvement",
+        "tactics 219/235 (parent 216)"
+      ]
+    }
+  ]
+}
