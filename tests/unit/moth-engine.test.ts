@@ -177,7 +177,7 @@ describe('NNUE evaluation', () => {
         expect(e.evaluate().nnue).toBe(fresh.evaluate().nnue);
         const f = fresh.features();
         const t = Math.trunc(forwardCp(net, { fw: Int16Array.from(f.white), fb: Int16Array.from(f.black), stmWhite: fresh.sideToMove() === 'w', classical: 0, target: 0 }));
-        expect(fresh.evaluate().nnue).toBe(Math.max(-NN_CLAMP, Math.min(NN_CLAMP, t)));
+        expect(fresh.evaluate().nnue).toBe(Math.max(-NN_CLAMP, Math.min(NN_CLAMP, t)) + 0); // + 0 normalises -0
       }
     }
     e.loadNetwork(null);

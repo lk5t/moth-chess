@@ -1,6 +1,6 @@
 {
   "format": "moth-registry-1",
-  "active": null,
+  "active": "moth-nn-2.0.4-1b724dd4",
   "models": [
     {
       "id": "moth-nn-2.0.1-1ea156d6",
@@ -108,6 +108,42 @@
         "validation loss improved 1.68%",
         "match 52.0% (LOS 74%) vs classical: not a measurable improvement",
         "tactics 219/235 (parent 216)"
+      ]
+    },
+    {
+      "id": "moth-nn-2.0.4-1b724dd4",
+      "version": "2.0.4",
+      "file": "moth-nn-2.0.4-1b724dd4.mothnn",
+      "status": "approved",
+      "parent": "classical",
+      "createdAt": 1793775917937,
+      "summary": {
+        "valLoss": 0.015838393822653382,
+        "valLossParent": 0.016406431798808855,
+        "match": {
+          "games": 400,
+          "wins": 166,
+          "draws": 94,
+          "losses": 140,
+          "score": 0.5325,
+          "elo": 22.6,
+          "eloError": 29.9,
+          "los": 0.9314028585245845,
+          "vs": "classical"
+        },
+        "tactics": {
+          "solved": 216,
+          "total": 235
+        },
+        "parentTactics": {
+          "solved": 216,
+          "total": 235
+        }
+      },
+      "reasons": [
+        "validation loss improved 3.46%",
+        "match 53.3%, Elo +22.6 ± 29.9, LOS 93%",
+        "tactics 216/235 (parent 216)"
       ]
     }
   ]

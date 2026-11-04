@@ -45,7 +45,6 @@ export const ENGINE_NAME = 'MOTH Engine 2.0';
 export class MothUci {
   private opts: Options = { hash: 32, multiPv: 1, style: 'balanced', skill: 20, ownBook: true, evalFile: 'builtin', moveOverhead: 10, slowMover: 100 };
   private book: OpeningBook | null = null;
-  private model: ModelFile | null = null;
   private modelId = 'classical';
   private ready: Promise<void>;
   private chain: Promise<void> = Promise.resolve();
@@ -150,11 +149,11 @@ export class MothUci {
 
   private async applyEvalFile(spec: string) {
     this.opts.evalFile = spec;
-    if (spec === 'none' || spec === 'classical') { this.engine.loadNetwork(null); this.model = null; this.modelId = 'classical'; }
+    if (spec === 'none' || spec === 'classical') { this.engine.loadNetwork(null); this.modelId = 'classical'; }
     else {
       const f = await this.io.loadModel(spec);
-      if (f) { this.engine.loadNetwork(f.weights); this.model = f; this.modelId = f.meta.id; }
-      else { this.engine.loadNetwork(null); this.model = null; this.modelId = 'classical'; if (spec !== 'builtin') this.io.emit(`info string model ${spec} not found, using classical evaluation`); }
+      if (f) { this.engine.loadNetwork(f.weights); this.modelId = f.meta.id; }
+      else { this.engine.loadNetwork(null); this.modelId = 'classical'; if (spec !== 'builtin') this.io.emit(`info string model ${spec} not found, using classical evaluation`); }
     }
     this.engine.newGame();
     this.cache.clear();

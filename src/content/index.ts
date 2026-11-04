@@ -215,8 +215,8 @@ function start(site: SiteId, initialSettings: Settings) {
     const size = Number(svg.getAttribute('width')) || boardEl.getBoundingClientRect().width;
     if (!size) return;
     const o = reading.orientation;
-    // best move: outline its start and destination squares
-    const best = arrows.find((a) => a.rank === 1);
+    // best move (engine line 1 = rank 0): outline its start and destination squares
+    const best = arrows.find((a) => a.rank === 0);
     if (best) for (const sq of [best.from, best.to]) {
       const p = squareOrigin(sq, size, o);
       const rect = document.createElementNS(NS, 'rect');

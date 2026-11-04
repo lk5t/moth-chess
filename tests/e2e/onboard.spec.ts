@@ -25,9 +25,9 @@ const centre = async (page: Page, sq: string, orientation: 'white' | 'black') =>
 }, [sq, orientation] as const);
 
 async function expectArrowOn(page: Page, from: string, to: string, orientation: 'white' | 'black') {
-  await expect.poll(async () => (await layer(page))?.arrows.find((a) => a.rank === 1)?.from, { timeout: 45_000 }).toBe(from);
+  await expect.poll(async () => (await layer(page))?.arrows.find((a) => a.rank === 0)?.from, { timeout: 45_000 }).toBe(from);
   const l = (await layer(page))!;
-  const a = l.arrows.find((x) => x.rank === 1)!;
+  const a = l.arrows.find((x) => x.rank === 0)!;
   expect(a.to).toBe(to);
   const f = await centre(page, from, orientation), t = await centre(page, to, orientation);
   expect(Math.abs(a.x1 - f.x)).toBeLessThan(1.5); expect(Math.abs(a.y1 - f.y)).toBeLessThan(1.5);
@@ -40,7 +40,7 @@ test('recognises the board automatically, verifies it from the move list and dra
   await page.goto('https://lichess.org/analysis');
   const frame = await overlayFrame(page);
   await expect(frame.getByText(/Verified position · move list/)).toBeVisible();
-  await expect(frame.getByRole('combobox', { name: 'Engine' })).toHaveValue('moth');
+  await expect(frame.getByRole('combobox', { name: 'Engine', exact: true })).toHaveValue('moth');
   await expectArrowOn(page, 'h5', 'f7', 'white');
   await expect.poll(async () => (await layer(page))?.evalBar).toBe('+M1');
   await page.screenshot({ path: 'test-results/onboard-white.png' });

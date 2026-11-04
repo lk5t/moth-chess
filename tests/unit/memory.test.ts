@@ -132,7 +132,9 @@ describe('database migrations', () => {
     const v2 = new MothDB(name);
     setDb(v2);
     await v2.open();
-    expect(v2.verno).toBe(2);
+    expect(v2.verno).toBe(3); // migrates straight to the latest schema
+    expect(await v2.practice.count()).toBe(0); // v3 tables exist
+    expect(await v2.models.count()).toBe(0);
     const g = (await v2.games.toArray())[0];
     expect(g.tags).toEqual([]);
     expect(g.posHashes!.length).toBeGreaterThan(5);

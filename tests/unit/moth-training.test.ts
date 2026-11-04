@@ -147,7 +147,7 @@ describe('self-play and gating', () => {
 describe('opening book selection', () => {
   const pos: BookPosition = { moves: [
     { uci: 'e2e4', san: 'e4', games: 9000, score: 0.52, eval: 35, depth: 12, tags: ['main'] },
-    { uci: 'b2b4', san: 'b4', games: 40, score: 0.5, eval: -25, depth: 12, tags: ['gambit', 'aggressive'] },
+    { uci: 'b2b4', san: 'b4', games: 40, score: 0.5, eval: 5, depth: 12, tags: ['gambit', 'aggressive'] }, // sound for Aggressive (≤45 cp below best), outside Balanced's margin
     { uci: 'f2f3', san: 'f3', games: 20000, score: 0.7, eval: -120, depth: 12, tags: ['mistake'] },
     { uci: 'c2c4', san: 'c4', games: 3000, score: 0.53, eval: 20, depth: 12, tags: ['solid'] },
   ] };
