@@ -57,6 +57,8 @@ test('every MOTH section opens on the built-in board', async ({ context, ext }) 
   for (const name of ['MOTH Intelligence', 'Threat Vision', 'Neural Map', 'What-If Simulator', 'Game Review', 'Openings', 'MOTH Coach', 'Memory', 'Dashboard', 'Analysis']) {
     await page.getByRole('button', { name, exact: true }).click();
     await expect(page.locator('.page-head .badge')).toHaveText(name);
+    await page.waitForTimeout(400);
+    await page.screenshot({ path: `test-results/section-${name.toLowerCase().replace(/[^a-z]+/g, '-')}.png` });
   }
   expect(errors).toEqual([]);
 });
@@ -67,11 +69,14 @@ test('settings persist across reloads (chrome.storage.local)', async ({ context,
   await expect(options.getByRole('heading', { name: /Settings/ })).toBeVisible();
   const popup = await context.newPage();
   await popup.goto(ext('popup.html'));
-  const toggle = popup.getByRole('checkbox', { name: 'Move arrows' });
+  await options.screenshot({ path: 'test-results/settings.png', fullPage: true });
+  const toggle = popup.getByRole('switch', { name: 'Move arrows' });
   await expect(toggle).toBeChecked();
-  await toggle.uncheck();
+  await popup.screenshot({ path: 'test-results/popup.png' });
+  await toggle.setChecked(false, { force: true });
+  await expect(toggle).not.toBeChecked();
   await popup.reload();
-  await expect(popup.getByRole('checkbox', { name: 'Move arrows' })).not.toBeChecked();
+  await expect(popup.getByRole('switch', { name: 'Move arrows' })).not.toBeChecked();
   const stored = await sw.evaluate(async () => JSON.stringify(await chrome.storage.local.get(null)));
   expect(stored).toContain('"arrows":false');
 });
