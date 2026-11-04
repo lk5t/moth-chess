@@ -119,7 +119,7 @@ test('What-If simulator explores a variation without modifying the source game',
   await expect(page.getByRole('button', { name: 'Move Bb5' })).toHaveCount(0);
   // transfer to Neural Map
   await page.getByRole('button', { name: '→ Neural Map' }).click();
-  await expect(page.locator('.page-head .badge')).toHaveText('Neural Map');
+  await expect(page.locator('.page-head .badge')).toHaveText('Variation tree');
   await expect(page.getByRole('tree', { name: 'Variation graph' })).toBeVisible();
   await page.screenshot({ path: 'test-results/workflow-neural.png' });
 });

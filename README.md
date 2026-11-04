@@ -6,13 +6,16 @@ MOTH Chess is for analysis, study, game review, puzzles you solve yourself, and 
 
 ## Install in Brave
 
-1. Download `moth-chess-v2.0.zip` from the [latest release](https://github.com/lk5t/moth-chess/releases/latest) and unzip it, or build `dist/` yourself (below).
+1. Download `moth-chess-v3.0.zip` from the [latest release](https://github.com/lk5t/moth-chess/releases/latest) and unzip it, or build `dist/` yourself (see below).
 2. Open `brave://extensions` and turn on **Developer mode** (top right).
 3. Click **Load unpacked** and pick the `moth-chess-dist` folder (the one that contains `manifest.json`).
-4. Pin the MOTH icon from the puzzle-piece menu in the toolbar.
-5. The built-in analysis board opens on first install; it is also under the toolbar popup or **Alt+Shift+B**. Analysis starts at once with MOTH Engine.
-6. **Play MOTH** (rail icon) to play offline games against the engine; **MOTH Engine** (rail icon) shows the learning dashboard.
-7. *(Optional, on-board suggestions)* Open `https://lichess.org/analysis` (or a Lichess study, or `https://www.chess.com/analysis`), click the MOTH icon → **Allow on …**. From then on MOTH recognises the board automatically and draws its moves, square highlights and an evaluation bar directly on the site's board.
+4. Pin the MOTH icon. On first install, a short welcome tour sets the engine, the performance profile and website access.
+5. Open MOTH from the toolbar icon or with **Alt+Shift+B**. **Home** has the four main actions: Analyze a position, Review a game, Train, and Play MOTH.
+6. *(Optional, on-board analysis)* Open a Lichess or Chess.com analysis board, click the MOTH icon, then **Allow on …**.
+
+**Updating from 2.x:** replace the folder and press reload on the MOTH entry in `brave://extensions`. Settings, games, reviews, training data and models are migrated automatically and kept. Home confirms the update once.
+
+**Later updates:** MOTH checks GitHub Releases once a day and shows a notice when a new version is out. You can turn this off in Settings → About & updates. Unpacked extensions never update themselves: download the new zip, replace the folder and press reload.
 
 ## Build from source
 
@@ -81,25 +84,27 @@ Measured in Node (WebAssembly, single thread) on the 2-core build machine with m
 - **Styles:** Aggressive and Defensive choose a different move from Balanced in 32% and 35% of 60 middlegame positions. All three styles found the forced mate in 57/57 mate-in-1/2 puzzles.
 - **Correctness:** perft matches all six standard reference positions (16.6 M nodes, about 32 M nodes/s).
 
-## Features
+## Using MOTH Chess (3.0 workspace)
 
-| Area | What it does |
+| Area | What's there |
 |---|---|
-| **Engines** | MOTH Engine (default) and Stockfish 17.1 lite, each in its own worker, switchable in the overlay, on the board and in Settings. Game review / coach use Stockfish by default (stronger evaluations), configurable. Shared controller: MultiPV, depth/time limits, cancellation, stale-result rejection, crash recovery, idle shutdown, evaluation cache. |
-| **On-board suggestions** | On supported analysis boards MOTH recognises the board automatically (no copying FENs). A position counts as **verified** only when the site's own FEN field or its move list, replayed legally, reproduces exactly the pieces on the board. Otherwise it is shown as *unverified* and side to move / castling are asked for, never guessed. Arrows, start/destination highlights and an evaluation bar are drawn in a transparent, click-through SVG layer that tracks orientation, resizing, scrolling and zoom. |
-| **Play MOTH** | Offline games as White or Black, any style, seven levels, clocks (none to 15+10), takebacks (optional), resign, game-over detection, save to Memory, one-click review. |
-| **MOTH Engine dashboard** | Engine version, active model, human games processed, self-play games, training runs, candidates and their status (training / awaiting validation / approved / rejected), match and tactics results, strength estimate, opening statistics, and response-time tables (mean, P50, P95, P99) from the benchmark and from your own browser. |
-| **Analysis board** | Full-page board: legal moves (chess.js), promotion picker, flip, move list, FEN/PGN load, eval bar and coloured arrows (green/blue/orange = lines 1–3). |
-| **Floating overlay** | Shadow-DOM-isolated frame on supported analysis pages. You can drag, resize, minimise, close and set its opacity, and its position persists per site. Tabs: Analysis, Intelligence, Neural Map, Coach, Memory, Dashboard. |
-| **MOTH Intelligence** | Deterministic, explainable features: material, development, king safety, pawn structure, centre control, hanging pieces, tactics, candidate-move comparison, endgame principles and summaries. Engine-proven facts and heuristic explanations are labelled separately. An `Explainer` interface leaves room for an optional local LLM later. |
-| **Neural Map** | Interactive variation graph (SVG). Positions are deduplicated by position key, while distinct move histories are kept. Expand/collapse, zoom/pan, eval colour coding, bounded auto-expansion, save/reopen trees. |
-| **MOTH Coach** | Builds exercises from your reviewed games' mistakes (tactical, opening, endgame, missed wins) and runs them on a separate practice board: find the move, get it validated, read the explanation, and the result is saved. Daily and custom sessions, history and topic recommendations. It says so when there isn't enough data. |
-| **Threat Vision** | Toggleable layers: attacked squares, undefended/hanging pieces, checks, pins, forks/skewers, king-safety warnings and defensive replies. Geometric threats and engine-validated threats are visually distinct. |
-| **What-If Simulator** | Sandbox clone of the current position. Explore lines, compare Stockfish evaluations before and after, save, reset, send to Neural Map or export PGN. It never mutates the source game. |
-| **Personal Memory** | IndexedDB (Dexie) storage for games, positions, favourite openings, sessions, trees, exercises, coaching results, annotations, tags and folders. Search, filters, favourites, recents, position linking, duplicate detection, versioned migrations, JSON/PGN import/export and pagination. |
-| **Dashboard** | Games reviewed, estimated accuracy (explained formula, not a chess-site metric), blunder/mistake rates, opening/endgame performance, training success, trends, eval graphs. Filters: date, opening, result, colour, category. Small samples are flagged. |
-| **Openings & Review** | Local ECO book, matched by position so transpositions count, with explorer and favourites. PGN game review with an eval timeline, mistake/blunder detection, summary, annotated PGN export, and cancellable/resumable analysis. |
-| **Settings** | Appearance (theme, accent, opacity, scale, animation), engine, visual analysis, intelligence, memory (usage/export/import/clear) and general (shortcuts, start minimised, notifications, reset). Inputs are validated and saved in `chrome.storage.local`. |
+| **Home** | Quick analysis (paste a FEN or PGN), recent games, the training due today, engine status and performance profile. |
+| **Analyze** | **Evaluate**: board, evaluation bar, best lines with explanations, evaluation graph by move, undo/redo (Ctrl+Z / Ctrl+Y) and engine switching. **Game review**: accuracy, mistakes, critical moments and an exportable report. **Openings**: book responses checked by Stockfish, moves from your own games, typical plans and your repertoire. **Endgame**: endgame type, known results (KPK is exact), pawn races and technique. *More tools*: Explain, Threats, Variation tree, What-if. |
+| **Train** | **Coach**: exercises from your own mistakes, with spaced repetition. **Practice**: recommendations, endgame drills that adapt their level, and opening repertoire drills. **Play MOTH**: offline games from any position or drill, with seven levels, three styles, clocks, takebacks and draw offers. |
+| **Library** | **Games**: import PGNs (large files are fine), with folders, tags, search and export. **Player DNA**: your openings, accuracy trend, mistakes by phase, missed tactical patterns and endgame progress. You can reset it. |
+| **Engine Lab** (Full mode) | MOTH Engine models and learning; benchmarks (MOTH vs Stockfish on a puzzle suite); MOTH-vs-MOTH self-play matches with PGN export and resume; results history (JSON export). |
+| **Settings** | General (Simple/Full interface, hints, reset layout), Appearance (theme, HUD, board visuals), Engine performance (Eco/Standard/Performance profiles, engines, MOTH style), Website compatibility, Data management (backup/restore, storage), About & updates. |
+| **Control Center** | Status, engine self-check, website access, backups, error log, diagnostic reports you review before sharing, changelog and feature status. |
+
+**Simple** mode, the default for new installs, keeps advanced tools under *More tools* and hides Engine Lab. **Full** mode shows everything. Users upgrading from 2.x start in Full mode.
+
+### Performance profiles
+
+| Profile | Hash | Depth | Lines | MOTH move time | Pondering | Wait before analysing | Engine sleeps after |
+|---|---|---|---|---|---|---|---|
+| Eco | 16 MB | 14 | 2 | 60 ms | off | 400 ms | 20 s |
+| Standard | 64 MB | 18 | 3 | 100 ms | on | 140 ms | 90 s |
+| Performance | 256 MB (MOTH ≤ 128) | 24 | 3 | 250 ms | on | 60 ms | 5 min |
 
 ### Keyboard shortcuts
 
@@ -109,19 +114,20 @@ Measured in Node (WebAssembly, single thread) on the 2-core build machine with m
 | Alt+Shift+A | Start/stop analysis |
 | Alt+Shift+B | Open the analysis board |
 | ← / → / Home / End | Navigate moves (board page) |
-| F | Flip board · **Space** start/stop · **Alt+1…9** switch section |
+| F | Flip board · **Space** start/stop · **Alt+1…5** switch workspace · **Ctrl+Z / Ctrl+Y** undo/redo |
 
 To change the browser-level shortcuts, go to `brave://extensions/shortcuts`.
 
 ## Fair play
 
-- No static host permissions. Site access is **optional** and granted per site from the popup.
-- The content script is registered only for `lichess.org/analysis*`, `lichess.org/study/*`, `lichess.org/practice/*` and `www.chess.com/analysis*` plus `www.chess.com/play/computer*` (unrated games against Chess.com's bots; online, daily and tournament play stay blocked). Rated puzzle trainers (Lichess *Puzzles*, Chess.com *Puzzles*/*Rush*) are excluded because engine help there changes a rating. Solve puzzles yourself, or use MOTH Coach and Play MOTH offline.
-- Inside a page, MOTH re-classifies and **fails closed**. Game, TV, tournament, arena, puzzle-rush/storm/racer and play pages are blocked by URL, and any page showing running clocks is blocked by DOM evidence. When blocked, analysis stops and the overlay tears down.
-- MOTH never makes moves on third-party sites. It doesn't hide itself from those sites and doesn't read protected game state. The What-If simulator and Coach run only on MOTH's own boards.
-- When the page context is uncertain (no board found, pieces only and no side to move), no suggestions are shown until the position is confirmed.
-- Pondering runs only in MOTH's own offline games.
-- Everything stays on your machine. MOTH makes no network requests (verified in the Playwright suite).
+> MOTH Chess is intended for chess education, training, research, and analysis. We do not encourage cheating, unfair competitive advantages, or violations of chess platform rules. Users are responsible for following the rules of the platforms on which they play.
+
+- **Only engine assistance on websites is gated.** MOTH's own board, Library, training, settings and themes work everywhere.
+- **Allowed** (after you grant site access): analysis boards, studies, practice, lessons and the board editor; **finished games** and **solved or failed puzzles**, once the page itself shows that state; games against the site's computer.
+- **Always blocked:** live, rated, daily, tournament, arena, simul and TV games; timed puzzle modes (Puzzle Rush/Battle, Storm, Racer, Streak); any page with a running clock; unsolved rated puzzles.
+- **Uncertain states stay blocked.** A game page with no "game over" evidence, or a puzzle that is not finished, keeps MOTH in standby: nothing is drawn and no engine runs. Assistance switches on by itself when the page shows a permitted state, and switches off the moment a clock runs or the next unsolved puzzle loads.
+- **Lightweight checks:** the page is re-checked when its DOM changes (throttled) and on navigation. There is no behavioural monitoring and no telemetry.
+- MOTH never moves pieces on websites. The rules live in [`fair-play/sites.json`](fair-play/) and are compiled into the build.
 
 ## Troubleshooting
 
@@ -129,7 +135,10 @@ To change the browser-level shortcuts, go to `brave://extensions/shortcuts`.
 - **Engine status shows "error"**: open the board page's DevTools console. `engines/stockfish.wasm` and `moth-engine/moth.wasm` must exist in `dist/` (run `npm install` again so the postinstall step copies Stockfish).
 - **MOTH plays instantly in the opening**: that is the opening book (1–10 ms). Turn off *Use the opening book for moves* in Settings to make it search every move.
 - **"Unverified · pieces only" on a site**: the page doesn't expose its move list or FEN in a way MOTH could verify. Choose the side to move (and castling rights if relevant) in the overlay.
-- **No overlay on Lichess/Chess.com**: make sure you're on an *analysis* URL and have clicked **Allow on …** in the popup. Live-game pages are blocked on purpose.
+- **No overlay on Lichess/Chess.com**: open the MOTH popup on that tab. It says whether the page is allowed, blocked (and why) or waiting for the game to finish. Live-game pages are blocked on purpose.
+- **Engine stopped after repeated crashes**: press *Restart engine* or switch engines. MOTH stops retrying after 4 failures in a row so it doesn't loop. Control Center → Engines → *Run checks* tests both engines.
+- **Something else is wrong**: Control Center → Feedback & diagnostics builds a report you can read and edit, then copy or attach to a GitHub issue yourself.
+- **Too much on screen**: Settings → General → Interface *Simple*, or *Reset layout*.
 - **Threads slider has no effect**: the bundled build is single-threaded, because overlay frames cannot use SharedArrayBuffer.
 
 ## Known limitations

@@ -66,7 +66,7 @@ test('Workspace 3.0: every workspace and section opens; advanced tools sit behin
     ['Library', ['Games', 'Player DNA'], []],
   ];
   for (const [ws, basic, adv] of plan) {
-    await page.getByRole('button', { name: ws, exact: true }).click();
+    await page.getByRole('navigation', { name: 'MOTH workspaces' }).getByRole('button', { name: ws, exact: true }).click();
     await expect(page.getByRole('heading', { name: ws, exact: true })).toBeVisible();
     for (const s of basic) {
       await page.locator('.sections').getByRole('tab', { name: s, exact: true }).click();

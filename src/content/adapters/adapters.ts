@@ -33,6 +33,17 @@ export interface BoardAdapter {
   avoid?(doc: Document): Element[];
 }
 
+/** Several boards on one page (previews, mini boards): use the largest visible one. */
+export function largestBoard(doc: Document, sels: string[]): HTMLElement | null {
+  let best: HTMLElement | null = null, area = 0;
+  for (const el of doc.querySelectorAll<HTMLElement>(sels.join(','))) {
+    const r = el.getBoundingClientRect();
+    const a = r.width * r.height;
+    if (a > area && r.width >= 120) { best = el; area = a; }
+  }
+  return best ?? (doc.querySelector<HTMLElement>(sels.join(',')));
+}
+
 const all = (doc: Document, sels: string[]) => sels.flatMap((s) => [...doc.querySelectorAll(s)]).filter((e) => (e as HTMLElement).offsetParent !== null || e.getClientRects().length > 0);
 
 const FILES = 'abcdefgh';
@@ -138,7 +149,7 @@ const CG_TYPES: Record<string, PieceType> = { pawn: 'p', knight: 'n', bishop: 'b
 
 export const lichessAdapter: BoardAdapter = {
   site: 'lichess',
-  findBoard: (doc) => (doc.querySelector('.main-board cg-container') ?? doc.querySelector('cg-container')) as HTMLElement | null,
+  findBoard: (doc) => (doc.querySelector('.main-board cg-container') as HTMLElement | null) ?? largestBoard(doc, ['cg-container']),
   watchTargets: (board) => [board.closest('.cg-wrap')].filter(Boolean) as Element[],
   avoid: (doc) => all(doc, ['.analyse__tools', '.analyse__controls', '.study__side', '.practice__side']),
   read(board, _doc, loc) {
@@ -200,7 +211,7 @@ export const lichessAdapter: BoardAdapter = {
 
 export const chesscomAdapter: BoardAdapter = {
   site: 'chesscom',
-  findBoard: (doc) => (doc.querySelector('wc-chess-board') ?? doc.querySelector('chess-board') ?? doc.querySelector('#board-analysis-board') ?? doc.querySelector('.board')) as HTMLElement | null,
+  findBoard: (doc) => largestBoard(doc, ['wc-chess-board', 'chess-board']) ?? largestBoard(doc, ['#board-analysis-board', '#board-single', '.board']),
   watchTargets: (board) => [board.parentElement].filter(Boolean) as Element[],
   avoid: (doc) => all(doc, ['#board-layout-sidebar', '.board-layout-sidebar', '#board-layout-controls', '.board-layout-controls']),
   read(board) {

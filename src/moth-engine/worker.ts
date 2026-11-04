@@ -85,6 +85,7 @@ self.onmessage = (e: MessageEvent) => {
   });
   for (const l of early.splice(0)) uci.handle(l);
 })().catch((err) => {
+  // The controller turns this line into a clear "files are missing or damaged" error and stops (no restart
+  // loop). Not rethrown: an uncaught rejection here would surface as a page error.
   self.postMessage(`info string fatal ${String((err as Error)?.message ?? err)}`);
-  throw err; // surfaces as a worker error → controller recovery
 });

@@ -27,14 +27,20 @@ test('startup and first analysis result for both engines', async ({ context, ext
   expect(results.mothFirstLineMs as number).toBeLessThan(15_000);
 });
 
-test('revisiting a position is answered from the cache; switching positions cancels the old search', async ({ context, ext }) => {
+test('revisiting a position is answered from the cache; switching positions cancels the old search', async ({ context, ext, sw }) => {
+  await sw.evaluate(async () => {
+    const k = 'moth.settings.v1';
+    const cur = (await chrome.storage.local.get(k))[k] ?? {};
+    await chrome.storage.local.set({ [k]: { ...cur, engine: { ...(cur.engine ?? {}), depth: 10 } } });
+  });
   const page = await context.newPage();
   await page.goto(ext('board.html?tab=analysis'));
   await page.getByText('Load a FEN or PGN').click();
   await page.locator('#moth-fen').fill('1. e4 e5 2. Nf3 Nc6 3. Bb5 a6');
   await page.getByRole('button', { name: 'Load', exact: true }).click();
-  await expect(page.getByText(/depth (1[2-9]|[2-9][0-9])/).first()).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByText(/depth 10(?!…)/).first()).toBeVisible({ timeout: 60_000 });
   await page.getByRole('button', { name: 'Previous move' }).click();
+  await expect(page.getByText(/depth 10(?!…)/).first()).toBeVisible({ timeout: 60_000 });
   await expect(page.locator('.line').first()).toBeVisible({ timeout: 30_000 });
   const t0 = Date.now();
   await page.getByRole('button', { name: 'Next move' }).click();
@@ -72,8 +78,8 @@ test('memory stays bounded over repeated navigation and reloads', async ({ conte
 test('idle engine workers are shut down; Home starts no engine', async ({ context, ext, sw }) => {
   await sw.evaluate(async () => {
     const k = 'moth.settings.v1';
-    const cur = (await chrome.storage.local.get(k))[k];
-    await chrome.storage.local.set({ [k]: { ...cur, performance: { ...cur.performance, idleSec: 10, profile: 'custom' } } });
+    const cur = (await chrome.storage.local.get(k))[k] ?? {};
+    await chrome.storage.local.set({ [k]: { ...cur, performance: { ...(cur.performance ?? {}), idleSec: 10, profile: 'custom' } } });
   });
   const page = await context.newPage();
   await page.goto(ext('board.html?tab=analysis'));

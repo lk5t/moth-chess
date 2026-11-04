@@ -1,0 +1,18 @@
+[
+ {
+  "at": "2026-11-04T09:51:48.809Z",
+  "a": "engine/moth/baseline/moth-2.0.wasm",
+  "b": "public/moth-engine/moth.wasm",
+  "games": 120,
+  "limit": "40 ms",
+  "wins": 47,
+  "draws": 37,
+  "losses": 36,
+  "score": 0.5458333333333333,
+  "elo": 31.9,
+  "eloError": 52.2,
+  "los": 0.8863621868516978,
+  "vs": "A",
+  "seconds": 657
+ }
+]
