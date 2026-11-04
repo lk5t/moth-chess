@@ -68,11 +68,14 @@ export function useAnalysis(fen: string | null, settings: Settings, opts: { enab
     }
     // debounce rapid position changes (scrolling through a game, dragging)
     const t = setTimeout(() => {
-      const h = engine.analyse(fen, { depth, multiPv, moveTimeMs }, (r) => {
-        if (searchRef.current === h.searchId) setResult(r);
+      // A cache hit calls back synchronously, before `analyse` returns a handle: accept it (it is this request).
+      let h: ReturnType<typeof engine.analyse> | null = null;
+      h = engine.analyse(fen, { depth, multiPv, moveTimeMs }, (r) => {
+        if (!h || searchRef.current === h.searchId) setResult(r);
       });
       searchRef.current = h.searchId;
-      h.result.then((r) => { if (searchRef.current === h.searchId) setResult(r); }).catch(() => {});
+      const handle = h;
+      handle.result.then((r) => { if (searchRef.current === handle.searchId) setResult(r); }).catch(() => {});
     }, debounceMs);
     return () => { clearTimeout(t); if (searchRef.current !== null) { engine.cancel(searchRef.current); searchRef.current = null; } };
   }, [fen, running, enabled, visible, depth, multiPv, moveTimeMs, nonce, engine, debounceMs]);

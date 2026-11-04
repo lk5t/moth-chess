@@ -53,7 +53,9 @@ jobs:
           TAG="${{ steps.ver.outputs.tag }}"; V="${TAG#v}"; MAJMIN="${V%.*}"
           mkdir -p pkg/moth-chess
           cp -r dist pkg/moth-chess/moth-chess-dist
-          cp README.md pkg/moth-chess/
+          cp README.md CHANGELOG.md pkg/moth-chess/
+          cp -r fair-play pkg/moth-chess/fair-play   # fair-play rules source (compiled into the build; kept here for reference/editing)
+          cp -r docs pkg/moth-chess/docs
           (cd pkg && zip -qr "../moth-chess-v${MAJMIN}.zip" moth-chess)
           echo "ZIP=moth-chess-v${MAJMIN}.zip" >> "$GITHUB_ENV"
       - name: Publish GitHub release
