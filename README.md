@@ -116,7 +116,7 @@ To change the browser-level shortcuts, go to `brave://extensions/shortcuts`.
 ## Fair play
 
 - No static host permissions. Site access is **optional** and granted per site from the popup.
-- The content script is registered only for `lichess.org/analysis*`, `lichess.org/study/*`, `lichess.org/practice/*` and `www.chess.com/analysis*`. Rated puzzle trainers (Lichess *Puzzles*, Chess.com *Puzzles*/*Rush*) are excluded because engine help there changes a rating. Solve puzzles yourself, or use MOTH Coach and Play MOTH offline.
+- The content script is registered only for `lichess.org/analysis*`, `lichess.org/study/*`, `lichess.org/practice/*` and `www.chess.com/analysis*` plus `www.chess.com/play/computer*` (unrated games against Chess.com's bots; online, daily and tournament play stay blocked). Rated puzzle trainers (Lichess *Puzzles*, Chess.com *Puzzles*/*Rush*) are excluded because engine help there changes a rating. Solve puzzles yourself, or use MOTH Coach and Play MOTH offline.
 - Inside a page, MOTH re-classifies and **fails closed**. Game, TV, tournament, arena, puzzle-rush/storm/racer and play pages are blocked by URL, and any page showing running clocks is blocked by DOM evidence. When blocked, analysis stops and the overlay tears down.
 - MOTH never makes moves on third-party sites. It doesn't hide itself from those sites and doesn't read protected game state. The What-If simulator and Coach run only on MOTH's own boards.
 - When the page context is uncertain (no board found, pieces only and no side to move), no suggestions are shown until the position is confirmed.

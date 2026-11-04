@@ -16,7 +16,7 @@ export interface SiteDef {
 
 export const SITES: SiteDef[] = [
   { id: 'lichess', label: 'Lichess analysis board, studies & practice', origin: 'https://lichess.org/*', matches: ['https://lichess.org/analysis*', 'https://lichess.org/practice/*', 'https://lichess.org/study/*'] },
-  { id: 'chesscom', label: 'Chess.com analysis board', origin: 'https://www.chess.com/*', matches: ['https://www.chess.com/analysis*'] },
+  { id: 'chesscom', label: 'Chess.com analysis board & games vs computer', origin: 'https://www.chess.com/*', matches: ['https://www.chess.com/analysis*', 'https://www.chess.com/play/computer*'] },
 ];
 
 export interface PageProbe {
@@ -27,7 +27,7 @@ export interface PageProbe {
 }
 
 export type PageVerdict =
-  | { status: 'supported'; site: SiteId; context: 'analysis' | 'practice' | 'study' }
+  | { status: 'supported'; site: SiteId; context: 'analysis' | 'practice' | 'study' | 'computer' }
   | { status: 'blocked'; site: SiteId; reason: string }
   | { status: 'unsupported'; reason: string };
 
@@ -59,10 +59,16 @@ export function classifyPage(p: PageProbe): PageVerdict {
     return { status: 'unsupported', reason: 'Only the Lichess analysis board, studies and Practice are supported' };
   }
   if (host === 'chess.com') {
+    // Unrated games against Chess.com's own bots (no human opponent, no rating). Checked before the
+    // /play block so only /play/computer is allowed; the running-clock check below still applies.
+    if (/^\/play\/computer(\/|$)/.test(path)) {
+      for (const sel of CHESSCOM_LIVE_DOM) if (p.has(sel)) return { status: 'blocked', site: 'chesscom', reason: 'A running clock was detected on this page' };
+      return { status: 'supported', site: 'chesscom', context: 'computer' };
+    }
     for (const [re, reason] of CHESSCOM_BLOCKED_PATHS) if (re.test(path)) return { status: 'blocked', site: 'chesscom', reason };
     for (const sel of CHESSCOM_LIVE_DOM) if (p.has(sel)) return { status: 'blocked', site: 'chesscom', reason: 'A running clock was detected on this page' };
     if (/^\/analysis(\/|$)/.test(path)) return { status: 'supported', site: 'chesscom', context: 'analysis' };
-    return { status: 'unsupported', reason: 'Only the Chess.com analysis board is supported' };
+    return { status: 'unsupported', reason: 'Only the Chess.com analysis board and games vs the computer are supported' };
   }
   return { status: 'unsupported', reason: 'MOTH does not integrate with this website' };
 }

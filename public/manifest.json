@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "MOTH Chess",
   "short_name": "MOTH Chess",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Local chess analysis and training with the original MOTH Engine and Stockfish \u2014 on-board suggestions on analysis boards, offline play, coaching. Never runs in live games.",
   "minimum_chrome_version": "110",
   "icons": {

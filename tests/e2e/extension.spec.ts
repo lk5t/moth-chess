@@ -88,7 +88,7 @@ test('fair play: live/competitive pages are blocked by the service worker', asyn
     const urls = [
       'https://lichess.org/tv', 'https://lichess.org/abcdEFGH', 'https://lichess.org/tournament/xyz',
       'https://www.chess.com/play/online', 'https://www.chess.com/game/live/123456', 'https://www.chess.com/puzzles/rush',
-      'https://lichess.org/analysis', 'https://www.chess.com/analysis', 'https://example.com/',
+      'https://lichess.org/analysis', 'https://www.chess.com/analysis', 'https://www.chess.com/play/computer', 'https://example.com/',
     ];
     const out: Record<string, string> = {};
     for (const url of urls) out[url] = (await chrome.runtime.sendMessage({ type: 'tab-status', tabId: -1, url })).state;
@@ -103,6 +103,7 @@ test('fair play: live/competitive pages are blocked by the service worker', asyn
   // analysis boards are supported but need explicit user permission first
   expect(verdicts['https://lichess.org/analysis']).toBe('needs-permission');
   expect(verdicts['https://www.chess.com/analysis']).toBe('needs-permission');
+  expect(verdicts['https://www.chess.com/play/computer']).toBe('needs-permission'); // unrated games vs bots
   expect(verdicts['https://example.com/']).toBe('unsupported');
 });
 

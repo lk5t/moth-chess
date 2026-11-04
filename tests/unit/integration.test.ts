@@ -18,6 +18,10 @@ describe('fair-play restrictions', () => {
     expect(classifyPage(probe('https://lichess.org/analysis/standard/rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR_w_KQkq_-_0_1'))).toMatchObject({ status: 'supported' });
     expect(classifyPage(probe('https://lichess.org/practice/checkmates/piece-checkmates-i/BJy6fEDf'))).toMatchObject({ status: 'supported', context: 'practice' });
     expect(classifyPage(probe('https://www.chess.com/analysis'))).toMatchObject({ status: 'supported', site: 'chesscom' });
+    expect(classifyPage(probe('https://www.chess.com/play/computer'))).toMatchObject({ status: 'supported', site: 'chesscom', context: 'computer' });
+    expect(classifyPage(probe('https://www.chess.com/play/computer/discover'))).toMatchObject({ status: 'supported', context: 'computer' });
+    expect(classifyPage(probe('https://www.chess.com/play/computers-online')).status).toBe('blocked');
+    expect(classifyPage(probe('https://www.chess.com/play/computer', ['.clock-player-turn'])).status).toBe('blocked');
   });
   it('blocks live and rated game pages by URL', () => {
     for (const url of [
