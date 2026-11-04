@@ -14,10 +14,17 @@ Source of truth for where MOTH Chess may run. Edit `sites.json`, send it back, a
 | `matches` | Content-script URL patterns. MOTH's script is only injected on these URLs. |
 | `liveDom` | CSS selectors that mean "a live game is running here", such as running clocks. Any match **blocks** the page. |
 | `allow` | `{ "path": regex, "context": name }`: pages where MOTH is supported. `context` is a short label (analysis, study, practice, computer, …). |
+| `review` | `{ "path": regex, "context": name, "requireDom": [selectors], "pendingReason": text }`: pages that become analysable only once the page itself shows a finished state, such as a game-over banner or a solved or failed puzzle. Until one `requireDom` selector is present, the page is blocked, marked *pending*, and MOTH waits in standby. |
 | `block` | `{ "path": regex, "reason": text }`: pages that are always blocked. |
 | `unsupportedReason` | Shown for any other page on the site. |
 
-The order for each page is: **liveDom → allow → block → unsupported**. A running clock always wins, and a page that matches nothing is not supported.
+The order for each page is: **liveDom → allow → review → block → unsupported**. A running clock always wins, and a page that matches nothing is not supported.
+
+### Since 3.0
+
+Only engine *assistance* (the HUD, arrows and evaluation on the page) is gated. MOTH's own board, Library, training, settings and themes work on every page.
+
+Checks are lightweight. A page is re-classified only when its DOM changes (throttled) or when it navigates, with a slow fallback poll. There is no behavioural monitoring and nothing is sent anywhere.
 
 ## What gets compiled
 

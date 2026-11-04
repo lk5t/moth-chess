@@ -8,6 +8,7 @@ import { reviewFor, runReview } from '@/review/service';
 import { annotatedPgn, countClasses } from '@/review/review';
 import type { GameReview, SavedGame } from '@/types';
 import { formatScore } from '@/engine/normalize';
+import { buildReport, reportMarkdown } from '@/review/report';
 
 export function ReviewPanel() {
   const { gameId, loadPgn, goto, cursor, settings, updateSettings, toast } = useApp();
@@ -74,6 +75,7 @@ export function ReviewPanel() {
               {!progress && <button className="btn primary" onClick={start}>{review?.status === 'paused' ? '▶ Resume review' : review?.status === 'complete' ? '↻ Re-run review' : '▶ Review game'}</button>}
               {progress && <button className="btn danger" onClick={() => abortRef.current?.abort()}>■ Cancel (keeps progress)</button>}
               {review?.status === 'complete' && game && <button className="btn" onClick={() => downloadText(`moth-review-${game.id}.pgn`, annotatedPgn(review, game.headers, game.headers.FEN), 'application/x-chess-pgn')}>Export annotated PGN</button>}
+              {review?.status === 'complete' && game && <button className="btn" onClick={() => downloadText(`moth-report-${game.id}.md`, reportMarkdown(buildReport(review, game)), 'text/markdown')}>Export report</button>}
             </div>
             {progress && (
               <div aria-live="polite">
@@ -105,6 +107,7 @@ export function ReviewPanel() {
               );
             })}
           </div>
+          {game && <ReportCard review={review} game={game} goto={goto} />}
           <Card title="Summary">
             <ul style={{ margin: 0, paddingLeft: 18 }} className="stack small">{review.summary?.map((s, i) => <li key={i}>{s}</li>)}</ul>
           </Card>
@@ -141,5 +144,29 @@ export function ReviewPanel() {
         </div>
       </Card>
     </div>
+  );
+}
+
+function ReportCard({ review, game, goto }: { review: GameReview; game: SavedGame; goto: (ply: number) => void }) {
+  const r = buildReport(review, game);
+  return (
+    <Card title="Game report" actions={<span className="muted small">from the engine review</span>}>
+      <ul className="small" style={{ margin: '0 0 6px', paddingLeft: 18 }}>{r.summary.map((s) => <li key={s}>{s}</li>)}</ul>
+      {r.opening && <div className="small"><span className="badge neutral">{r.opening.eco}</span> {r.opening.name}</div>}
+      {(r.strengths.length > 0 || r.weaknesses.length > 0) && (
+        <div className="grid-2" style={{ marginTop: 6 }}>
+          <div className="small">{r.strengths.map((s) => <div key={s}>✓ {s}</div>)}</div>
+          <div className="small">{r.weaknesses.map((s) => <div key={s}>✗ {s}</div>)}</div>
+        </div>
+      )}
+      <details style={{ marginTop: 6 }}>
+        <summary className="small" style={{ cursor: 'pointer' }}>Details: missed chances, strong moves, phases, method</summary>
+        {r.missed.length > 0 && <div className="small" style={{ marginTop: 6 }}><b>Missed opportunities</b>{r.missed.map((m) => <div key={m.ply}><a href="#" onClick={(e) => { e.preventDefault(); goto(m.ply - 1); }}>{m.label}</a>{m.best ? ` — ${m.best} was stronger` : ''}</div>)}</div>}
+        {r.strong.length > 0 && <div className="small" style={{ marginTop: 6 }}><b>Strong moves</b>{r.strong.map((m) => <div key={m.ply}><a href="#" onClick={(e) => { e.preventDefault(); goto(m.ply); }}>{m.label}</a> — {m.why}</div>)}</div>}
+        <div className="small" style={{ marginTop: 6 }}><b>Accuracy by phase</b>{r.phases.map((p) => <div key={p.phase}>{p.phase}: White {p.w?.toFixed(0) ?? '—'}% · Black {p.b?.toFixed(0) ?? '—'}%</div>)}</div>
+        <div className="small muted" style={{ marginTop: 6 }}>{r.method}</div>
+        <div className="small" style={{ marginTop: 6 }}>{r.training.count} training exercise{r.training.count === 1 ? '' : 's'} can be made from this game (Train → Coach → Generate).</div>
+      </details>
+    </Card>
   );
 }

@@ -25,7 +25,7 @@ export interface PlayerDna {
   sufficient: boolean;
 }
 
-const scoreOf = (g: SavedGame) => {
+const scoreOf = (g: SavedGame): number | null => {
   const side = g.userColor;
   if (g.result === '1/2-1/2') return 0.5;
   if (!side || g.result === '*') return null;
