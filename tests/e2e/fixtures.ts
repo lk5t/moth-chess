@@ -11,7 +11,7 @@ export const test = base.extend<{ context: BrowserContext; sw: Worker; extId: st
   context: async ({}, use) => {
     const userDir = mkdtempSync(resolve(tmpdir(), 'moth-e2e-'));
     const context = await chromium.launchPersistentContext(userDir, {
-      channel: 'chromium', // new headless mode supports extensions
+      ...(process.env.MOTH_BROWSER ? { executablePath: process.env.MOTH_BROWSER } : { channel: 'chromium' }), // new headless mode supports extensions; MOTH_BROWSER = Brave
       headless: true,
       viewport: { width: 1400, height: 950 },
       args: [`--disable-extensions-except=${DIST}`, `--load-extension=${DIST}`],

@@ -47,7 +47,7 @@ export const test = base.extend<{ context: BrowserContext; serve: (path: string,
     m.host_permissions = m.optional_host_permissions;
     writeFileSync(resolve(dir, 'manifest.json'), JSON.stringify(m));
     const context = await chromium.launchPersistentContext(mkdtempSync(resolve(tmpdir(), 'moth-e2e-')), {
-      channel: 'chromium', headless: true, viewport: { width: 1400, height: 900 },
+      ...(process.env.MOTH_BROWSER ? { executablePath: process.env.MOTH_BROWSER } : { channel: 'chromium' }), headless: true, viewport: { width: 1400, height: 900 },
       args: [`--disable-extensions-except=${dir}`, `--load-extension=${dir}`],
     });
     let [sw] = context.serviceWorkers();

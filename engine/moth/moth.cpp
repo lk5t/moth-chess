@@ -588,6 +588,11 @@ static int eval_classical() {
         eg[c] += (MOB_EG[t] * (mob - MOB_BASE[t])) * st.mobility / 100;
         u64 za = a & zone;
         if (za) { katt_count[c]++; katt_weight[c] += popcnt(za) * (t == QUEEN ? 4 : t == ROOK ? 3 : 2); }
+        // 3.0: threats — our pawns attacking their pieces are handled below; here, rook on the 7th
+        if (t == ROOK && ((c == WHITE && rank_of(s) == 6) || (c == BLACK && rank_of(s) == 1))) {
+          int ekr = c == WHITE ? rank_of(king_sq(them)) : 7 - rank_of(king_sq(them));
+          if (ekr == 7 || (P.bb[them][PAWN] & (c == WHITE ? 0x00FF000000000000ULL : 0x000000000000FF00ULL))) { mg[c] += 20; eg[c] += 30; }
+        }
         if (t == ROOK) {
           u64 fm = BETWEEN_FILE[file_of(s)];
           if (!(fm & P.bb[c][PAWN])) { if (!(fm & P.bb[them][PAWN])) { mg[c] += 25; eg[c] += 10; } else { mg[c] += 12; eg[c] += 6; } }
@@ -597,6 +602,12 @@ static int eval_classical() {
       }
     }
     if (popcnt(P.bb[c][BISHOP]) >= 2) { mg[c] += 30; eg[c] += 50; }
+    // 3.0: threats by pawns — each enemy minor/major piece attacked by one of our pawns
+    {
+      u64 hit = pawn_att[c] & (P.occ[them] & ~P.bb[them][PAWN] & ~P.bb[them][KING]);
+      int nThreats = popcnt(hit);
+      mg[c] += 45 * nThreats; eg[c] += 30 * nThreats;
+    }
     // pawn structure
     u64 pw = P.bb[c][PAWN], b = pw;
     int structure_mg = 0, structure_eg = 0, passed_mg = 0, passed_eg = 0;
@@ -605,6 +616,8 @@ static int eval_classical() {
       int f = file_of(s), rr = c == WHITE ? rank_of(s) : 7 - rank_of(s);
       if (FORWARD_FILE[c][s] & pw) { structure_mg -= 10; structure_eg -= 20; }
       if (!(ADJ_FILES[f] & pw)) { structure_mg -= 12; structure_eg -= 15; }
+      // 3.0: connected pawns (side by side, or protected by a pawn) gain value as they advance
+      else if (ADJ_FILES[f] & pw & ((u64)0xFF << (rank_of(s) * 8)) || (pawn_att[c] & bit(s))) { static const int CON[8] = { 0, 3, 5, 8, 14, 24, 40, 0 }; structure_mg += CON[rr]; structure_eg += CON[rr]; }
       if (!(PASSED_MASK[c][s] & P.bb[them][PAWN])) {
         static const int PMG[8] = { 0, 5, 10, 18, 32, 55, 95, 0 }, PEG[8] = { 0, 12, 20, 38, 65, 110, 170, 0 };
         int pm = PMG[rr], pe = PEG[rr];

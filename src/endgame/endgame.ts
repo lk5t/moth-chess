@@ -50,13 +50,13 @@ function races(ps: Pc[], whiteToMove: boolean) {
     const blocked = ps.some((o) => o.t === 'p' && o.white !== p.white && Math.abs(file(o.sq) - file(p.sq)) <= 1 && (rank(o.sq) - rank(p.sq)) * dir > 0);
     if (blocked) continue; // not a passed pawn
     const promo = p.white ? 56 + file(p.sq) : file(p.sq);
-    let moves = Math.abs(7 * (p.white ? 1 : 0) - rank(p.sq)) ;
-    moves = p.white ? 7 - rank(p.sq) : rank(p.sq);
+    let moves = p.white ? 7 - rank(p.sq) : rank(p.sq);
     if ((p.white && rank(p.sq) === 1) || (!p.white && rank(p.sq) === 6)) moves--; // double step
     const enemyK = p.white ? kings.b : kings.w;
     const enemyToMove = p.white ? !whiteToMove : whiteToMove;
-    const kingDist = dist(enemyK.sq, promo) - (enemyToMove ? 1 : 0);
-    const insideSquare = kingDist <= moves;
+    // rule of the square: the king catches the pawn if it can reach the queening square in time
+    // (if the pawn's side moves first, the square has already shrunk by one)
+    const insideSquare = dist(enemyK.sq, promo) <= moves - (enemyToMove ? 0 : 1);
     const ownK = p.white ? kings.w : kings.b;
     const ownKingBlocks = file(ownK.sq) === file(p.sq) && (rank(ownK.sq) - rank(p.sq)) * dir > 0;
     out.push({ pawn: NAME(p.sq), white: p.white, movesToQueen: moves, insideSquare, unstoppable: onlyPawns && !insideSquare && !ownKingBlocks });

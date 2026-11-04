@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AppContext, type AppCtx, type TabId } from '@/components/AppContext';
 import { useSettings } from '@/settings/useSettings';
 import { useAnalysis, arrowsFromResult } from '@/components/useAnalysis';
@@ -10,24 +10,26 @@ import { Icon, useThemeRoot } from '@/components/ui';
 import { AnalysisPanel } from '@/components/panels/AnalysisPanel';
 import { IntelligencePanel } from '@/components/panels/IntelligencePanel';
 import { ThreatPanel } from '@/components/panels/ThreatPanel';
-import { NeuralMapPanel } from '@/components/panels/NeuralMapPanel';
-import { WhatIfPanel } from '@/components/panels/WhatIfPanel';
-import { ReviewPanel } from '@/components/panels/ReviewPanel';
 import { OpeningsPanel } from '@/components/panels/OpeningsPanel';
 import { CoachPanel } from '@/components/panels/CoachPanel';
 import { MemoryPanel } from '@/components/panels/MemoryPanel';
-import { DnaPanel } from '@/components/panels/DnaPanel';
-import { EndgamePanel } from '@/components/panels/EndgamePanel';
-import { PracticePanel } from '@/components/panels/PracticePanel';
-import { LabPanel } from '@/components/panels/LabPanel';
-import { LearningPanel } from '@/components/panels/LearningPanel';
 import { HomePanel } from '@/components/panels/HomePanel';
-import { PlayView } from '@/play/PlayView';
 import { analyseThreats } from '@/threat-vision/threats';
 import { threatLayers } from '@/threat-vision/layers';
 import { START_FEN, validateFen } from '@/chess/position';
 import type { NeuralTree, Orientation } from '@/types';
 import { recogniseOpening } from '@/openings/eco';
+
+// Heavy sections load on first use (Instant Analysis: Home and Evaluate open without parsing them).
+const NeuralMapPanel = lazy(() => import('@/components/panels/NeuralMapPanel').then((x) => ({ default: x.NeuralMapPanel })));
+const WhatIfPanel = lazy(() => import('@/components/panels/WhatIfPanel').then((x) => ({ default: x.WhatIfPanel })));
+const ReviewPanel = lazy(() => import('@/components/panels/ReviewPanel').then((x) => ({ default: x.ReviewPanel })));
+const LearningPanel = lazy(() => import('@/components/panels/LearningPanel').then((x) => ({ default: x.LearningPanel })));
+const PlayView = lazy(() => import('@/play/PlayView').then((x) => ({ default: x.PlayView })));
+const DnaPanel = lazy(() => import('@/components/panels/DnaPanel').then((x) => ({ default: x.DnaPanel })));
+const EndgamePanel = lazy(() => import('@/components/panels/EndgamePanel').then((x) => ({ default: x.EndgamePanel })));
+const PracticePanel = lazy(() => import('@/components/panels/PracticePanel').then((x) => ({ default: x.PracticePanel })));
+const LabPanel = lazy(() => import('@/components/panels/LabPanel').then((x) => ({ default: x.LabPanel })));
 
 // ---------- Workspace 3.0 information architecture ----------
 // Five workspaces in the sidebar; each has a few sections shown as tabs. Advanced tools are tucked behind
@@ -270,14 +272,18 @@ export function BoardApp() {
               <button className="btn sm ghost" style={{ marginLeft: 8 }} onClick={() => setWelcome(false)}>Dismiss</button>
             </div>
           )}
-          <div key={tab} className="fade-in">
-            {tab === 'home' ? <HomePanel /> : tab === 'play' ? <PlayView /> : tab === 'engine' ? <LearningPanel /> : tab === 'lab' ? <LabPanel /> : (
-              <main className="main">
-                {boardColumn}
-                <div className="stack" style={{ minWidth: 0 }}>{panel}</div>
-              </main>
-            )}
-          </div>
+          {tab === 'home' || tab === 'play' || tab === 'engine' || tab === 'lab' ? (
+            <div key={tab} className="fade-in">
+              <Suspense fallback={<div className="empty">Loading…</div>}>
+                {tab === 'home' ? <HomePanel /> : tab === 'play' ? <PlayView /> : tab === 'engine' ? <LearningPanel /> : <LabPanel />}
+              </Suspense>
+            </div>
+          ) : (
+            <main className="main">
+              {boardColumn}
+              <div key={tab} className="stack fade-in" style={{ minWidth: 0 }}><Suspense fallback={<div className="empty">Loading…</div>}>{panel}</Suspense></div>
+            </main>
+          )}
         </div>
       </div>
       <div style={{ position: 'fixed', bottom: 16, left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', gap: 6, zIndex: 50 }} aria-live="polite">
