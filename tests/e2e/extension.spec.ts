@@ -36,7 +36,7 @@ test('starting position analysis reaches the requested depth with 3 lines', asyn
   const page = await context.newPage();
   await page.goto(ext('board.html'));
   await expect(page.locator('.line')).toHaveCount(3);
-  await expect(page.getByText(/depth (1[0-9]|2[0-9])(?!…)/)).toBeVisible({ timeout: 80_000 });
+  await expect(page.getByText(/depth (1[0-9]|2[0-9])(?!…)/).first()).toBeVisible({ timeout: 80_000 });
 });
 
 test('playing a move on the board updates the position and the move list', async ({ context, ext }) => {

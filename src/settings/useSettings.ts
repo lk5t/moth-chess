@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { DEFAULT_SETTINGS, type Settings, type SettingsPatch } from './schema';
+import { DEFAULT_SETTINGS, mergeSettings, type Settings, type SettingsPatch } from './schema';
 import { loadSettings, saveSettings, subscribeSettings } from './store';
 
 export function useSettings(): [Settings, (p: SettingsPatch) => Promise<void>, boolean] {
@@ -11,6 +11,10 @@ export function useSettings(): [Settings, (p: SettingsPatch) => Promise<void>, b
     const off = subscribeSettings((v) => alive && setS(v));
     return () => { alive = false; off(); };
   }, []);
-  const update = useCallback(async (p: SettingsPatch) => { setS(await saveSettings(p)); }, []);
+  // optimistic: controls reflect the change immediately; storage is the source of truth afterwards
+  const update = useCallback(async (p: SettingsPatch) => {
+    setS((cur) => mergeSettings(cur, p));
+    setS(await saveSettings(p));
+  }, []);
   return [s, update, loaded];
 }
