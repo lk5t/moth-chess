@@ -1,8 +1,12 @@
 name: Release
 
+# Publishes a GitHub release for the version in package.json when its notes file
+# (.github/release-notes/v<version>.md) lands on main. Already-released versions are skipped.
 on:
   push:
-    tags: ['v*']
+    branches: [main]
+    paths: ['.github/release-notes/**', '.github/workflows/release.yml', 'package.json']
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -12,29 +16,49 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Resolve version
+        id: ver
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="v$(node -p "require('./package.json').version")"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          if [ ! -f ".github/release-notes/$TAG.md" ]; then echo "skip=no notes for $TAG" >> "$GITHUB_OUTPUT";
+          elif gh release view "$TAG" >/dev/null 2>&1; then echo "skip=$TAG already released" >> "$GITHUB_OUTPUT";
+          else echo "skip=" >> "$GITHUB_OUTPUT"; fi
+      - name: Nothing to release
+        if: steps.ver.outputs.skip != ''
+        run: echo "Skipping: ${{ steps.ver.outputs.skip }}"
       - uses: actions/setup-node@v4
+        if: steps.ver.outputs.skip == ''
         with:
           node-version: 22
-      - run: npm install --no-audit --no-fund
-      - run: npx tsc --noEmit -p tsconfig.json
-      - run: npx vitest run
-      - run: npm run build
+      - if: steps.ver.outputs.skip == ''
+        run: npm install --no-audit --no-fund
+      - if: steps.ver.outputs.skip == ''
+        run: npx tsc --noEmit -p tsconfig.json
+      - if: steps.ver.outputs.skip == ''
+        run: npx vitest run
+      - if: steps.ver.outputs.skip == ''
+        run: npm run build
       - name: Browser tests
+        if: steps.ver.outputs.skip == ''
         run: |
           npx playwright install --with-deps chromium
           npx playwright test
       - name: Package
+        if: steps.ver.outputs.skip == ''
         run: |
-          V="${GITHUB_REF_NAME#v}"; MAJMIN="${V%.*}"
+          TAG="${{ steps.ver.outputs.tag }}"; V="${TAG#v}"; MAJMIN="${V%.*}"
           mkdir -p pkg/moth-chess
           cp -r dist pkg/moth-chess/moth-chess-dist
           cp README.md pkg/moth-chess/
           (cd pkg && zip -qr "../moth-chess-v${MAJMIN}.zip" moth-chess)
           echo "ZIP=moth-chess-v${MAJMIN}.zip" >> "$GITHUB_ENV"
       - name: Publish GitHub release
+        if: steps.ver.outputs.skip == ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          NOTES=".github/release-notes/${GITHUB_REF_NAME}.md"
-          [ -f "$NOTES" ] || NOTES=/dev/null
-          gh release create "$GITHUB_REF_NAME" "$ZIP" --title "MOTH Chess ${GITHUB_REF_NAME}" --notes-file "$NOTES" --verify-tag
+          TAG="${{ steps.ver.outputs.tag }}"
+          gh release create "$TAG" "$ZIP" --target "$GITHUB_SHA" --title "MOTH Chess $TAG" --notes-file ".github/release-notes/$TAG.md"
