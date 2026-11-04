@@ -2,7 +2,7 @@
 // Responsibilities: fair-play page classification (continuously), reading the visible board,
 // hosting the overlay frame in a closed Shadow DOM, drawing arrows/highlights (pointer-events: none).
 // It never makes moves, never interacts with the site's game logic, and does not hide itself.
-import { classifyPage, type PageVerdict, type SiteId } from './detector/sites';
+import { classifyPage, siteById, type PageVerdict, type SiteId } from './detector/sites';
 import { ADAPTERS, type BoardReading } from './adapters/adapters';
 import { arrowPath, squareCenter, squareOrigin } from './arrows/geometry';
 import { clampToViewport, defaultOverlayState, dragTo, resizeTo, BAR_H, MINI_W, type OverlayState } from './overlay/layout';
@@ -28,7 +28,7 @@ async function main() {
 
 function start(site: SiteId, initialSettings: Settings) {
   let settings = initialSettings;
-  const adapter = ADAPTERS[site];
+  const adapter = ADAPTERS[siteById(site).adapter];
   const cleanups: (() => void)[] = [];
   let alive = true;
   let reading: BoardReading | null = null;

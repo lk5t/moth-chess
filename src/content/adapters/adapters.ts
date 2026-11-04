@@ -234,7 +234,7 @@ export const chesscomAdapter: BoardAdapter = {
   },
 };
 
-export const ADAPTERS: Record<SiteId, BoardAdapter> = { lichess: lichessAdapter, chesscom: chesscomAdapter };
+export const ADAPTERS: Record<'chessground' | 'chesscom', BoardAdapter> = { chessground: lichessAdapter, chesscom: chesscomAdapter };
 
 /**
  * Compose a FEN from a reading plus user-provided metadata. Castling rights the user enabled are kept

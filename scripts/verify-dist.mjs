@@ -34,6 +34,14 @@ for (const f of ['content.js', 'background.js']) {
     if (/\bimport\s*\(|^import\s/m.test(src) && f === 'content.js') errors.push('content.js must be a classic script (no imports)');
   }
 }
+// fair-play rules (compiled in from /fair-play/sites.json): every site's origin must be requestable and embeddable
+const rules = JSON.parse(readFileSync(resolve(dist, '../fair-play/sites.json'), 'utf8'));
+for (const site of rules.sites) {
+  if (!(m.optional_host_permissions ?? []).includes(site.origin)) errors.push(`fair-play site ${site.id}: ${site.origin} missing from optional_host_permissions`);
+  if (!(m.web_accessible_resources?.[0]?.matches ?? []).includes(site.origin)) errors.push(`fair-play site ${site.id}: ${site.origin} missing from web_accessible_resources matches`);
+  for (const pat of site.matches) if (!pat.startsWith(site.origin.replace(/\*$/, ''))) errors.push(`fair-play site ${site.id}: match ${pat} is outside ${site.origin}`);
+  for (const r of [...(site.allow ?? []), ...(site.block ?? [])]) { try { new RegExp(r.path); } catch { errors.push(`fair-play site ${site.id}: invalid regex ${r.path}`); } }
+}
 if (errors.length) {
   console.error('[verify] FAILED:\n  ' + errors.join('\n  '));
   process.exit(1);
