@@ -71,7 +71,6 @@ export function PopupApp() {
         )}
         {msg && <div className="small" aria-live="polite">{msg}</div>}
       </div>
-      <p className="muted" style={{ fontSize: 10.5, margin: '8px 2px 0' }}>{DISCLAIMER}</p>
 
       <button className="btn primary" style={{ width: '100%', marginTop: 10 }} onClick={() => openBoard()}>Open analysis board</button>
       <div className="row" style={{ marginTop: 6 }}>
@@ -92,6 +91,7 @@ export function PopupApp() {
         <button className="btn sm ghost" onClick={() => chrome.runtime.openOptionsPage()}>Settings</button>
         <button className="btn sm ghost" onClick={() => { openExt('control.html#feedback'); window.close(); }}>Report a bug</button>
       </div>
+      <p className="muted" style={{ fontSize: 10, lineHeight: 1.4, margin: '8px 2px 0' }}>{DISCLAIMER}</p>
     </div>
   );
 }

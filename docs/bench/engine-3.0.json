@@ -1,0 +1,8 @@
+{
+ "machine": "2-core cloud VM, Node 22 (WASM), same network moth-nn-2.0.4 for both builds",
+ "abFixedNodes": { "games": 120, "limit": "20000 nodes/move", "w": 49, "d": 42, "l": 29, "elo": 58.5, "err95": 50.8, "los": 0.988, "note": "search changes only (countermove, history gravity/malus, log LMR, futility, improving)" },
+ "abTwoSlotTT": { "games": 120, "limit": "40000 nodes/move", "w": 32, "d": 56, "l": 32, "elo": 0, "err95": 45.7, "note": "no measurable effect at this table size; kept (standard technique, lowers overwrite rate in long searches)" },
+ "abTime": { "games": 120, "limit": "40 ms/move", "w": 47, "d": 37, "l": 36, "elo": 31.9, "err95": 52.2, "los": 0.886, "note": "3.0 build vs 2.0 build; positive but not statistically significant" },
+ "evalExperiment": { "games": 320, "limit": "20000 nodes/move", "w": 111, "d": 102, "l": 107, "elo": 4, "note": "pawn threats / connected pawns / rook on 7th: no measurable gain → NOT shipped" },
+ "tactics100ms": { "2.0": { "solved": 225, "of": 235, "knps": 1517, "avgDepth": 10.57, "nodesToDepth8": 162491 }, "3.0": { "solved": 224, "of": 235, "knps": 1323, "avgDepth": 10.89, "nodesToDepth8": 134086 } }
+}
