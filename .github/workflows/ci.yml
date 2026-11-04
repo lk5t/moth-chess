@@ -62,6 +62,18 @@ jobs:
           npx playwright install --with-deps chromium 2>&1 | tail -5
           npx playwright test 2>&1 | tee ci-logs/e2e.log
 
+      - name: Brave verification (real Brave browser, extension loaded unpacked)
+        id: brave
+        if: always() && steps.build.outcome == 'success'
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          sudo curl -fsSLo /usr/share/keyrings/brave-browser-archive-keyring.gpg https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/brave-browser-archive-keyring.gpg] https://brave-browser-apt-release.s3.brave.com/ stable main" | sudo tee /etc/apt/sources.list.d/brave-browser-release.list >/dev/null
+          sudo apt-get update -qq && sudo apt-get install -y -qq brave-browser >/dev/null
+          brave-browser --version | tee ci-logs/brave.log
+          MOTH_BROWSER=$(command -v brave-browser) npx playwright test tests/e2e/extension.spec.ts tests/e2e/overlay.spec.ts tests/e2e/missing-assets.spec.ts tests/e2e/play.spec.ts --output test-results-brave 2>&1 | tee -a ci-logs/brave.log
+
       - name: Publish logs and build to ci-output branch
         if: always()
         run: |
@@ -73,6 +85,7 @@ jobs:
             echo "unit=${{ steps.unit.outcome }}"
             echo "build=${{ steps.build.outcome }}"
             echo "e2e=${{ steps.e2e.outcome }}"
+            echo "brave=${{ steps.brave.outcome }}"
           } > ci-logs/summary.txt
           out=$(mktemp -d)
           cp -r ci-logs "$out/"

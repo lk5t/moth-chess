@@ -2,18 +2,18 @@
 export interface ChangelogEntry { version: string; date: string; title: string; items: string[] }
 
 export const CHANGELOG: ChangelogEntry[] = [
-  { version: '2.1.0', date: '2026-11', title: 'Expansion (public beta)', items: [
-    'New look: redesigned interface, new MOTH logo, grouped navigation and sectioned settings.',
-    'Control Center: engine status and self-checks, performance profile, website status, backups, diagnostics and this changelog.',
-    'Performance profiles: Eco, Standard and Performance.',
-    'Customisable analysis HUD: compact layout, evaluation bar side, number of arrows, best-move squares, and a panel that keeps itself off the board.',
-    'Board recognition follows boards that load late or are replaced, orientation flips and in-page navigation.',
-    'Automatic recovery: engine restarts with back-off and stops after repeated failures instead of looping; clear error messages with “Restart engine”.',
-    'First-run welcome tour (can be reopened from Settings or the Control Center).',
-    'Backup & restore with validation and preview; 2.0 Memory exports are still accepted.',
-    'Local diagnostic reports you review before sharing; nothing is uploaded automatically.',
-    'Settings are migrated from 2.0 without losing your choices.',
-    'Fixed: practice games, latency samples and training runs were exported but not re-imported.',
+  { version: '3.0.0', date: '2026-11', title: 'Freedom (public beta)', items: [
+    'Simpler workspace: Home, Analyze, Train, Library and Engine Lab, with advanced tools under “More tools” in Simple mode. New logo and design.',
+    'Fair play reworked: analysis is now available on finished games, solved puzzles, lessons and the board editor, as well as analysis boards, studies and bot games. Live, rated and tournament play stays blocked, and the rest of MOTH works on every page.',
+    'MOTH Engine 3.0: countermove and history-gravity move ordering, logarithmic late-move reductions, futility pruning, and a two-slot hash table (measured results are in the release notes).',
+    'Analysis Studio: evaluation graph, undo and redo, collapsible engine options and an endgame view.',
+    'Opening Explorer: MOTH book responses with engine checks, moves from your own games, typical plans, and a personal repertoire with drills.',
+    'Endgame Intelligence: exact king and pawn vs king results from a local table, rules for basic mates and rook endgames, pawn races, and training positions.',
+    'Player DNA, adaptive practice with spaced repetition, and smart game reports with an exportable Markdown report.',
+    'Play MOTH from any position or endgame drill, with draw offers.',
+    'Engine Lab: MOTH vs Stockfish puzzle benchmark, MOTH-vs-MOTH self-play matches with PGN export and resume, and a results history.',
+    'Control Center, performance profiles (Eco, Standard, Performance), automatic engine recovery, backup and restore, local diagnostics, a welcome tour and update notices.',
+    'Your settings, games and training data are migrated automatically and kept.',
   ] },
   { version: '2.0.1', date: '2026-11', title: 'Games vs the computer', items: ['On-board suggestions on Chess.com games against the computer (unrated, no human opponent). Clocks still block.'] },
   { version: '2.0.0', date: '2026-11', title: 'Evolution', items: [
@@ -27,6 +27,10 @@ export const CHANGELOG: ChangelogEntry[] = [
 /** Feature maturity, shown so unfinished parts are clearly identified. */
 export const FEATURE_STATUS: { name: string; status: 'Stable' | 'Beta' | 'Experimental'; note: string }[] = [
   { name: 'Analysis board (MOTH Engine / Stockfish)', status: 'Stable', note: 'Fully local; covered by automated tests.' },
+  { name: 'Endgame Intelligence', status: 'Beta', note: 'King + pawn vs king is exact; other endgames use labelled rules of thumb (no multi-GB tablebases).' },
+  { name: 'Player DNA, Practice, repertoire drills', status: 'Beta', note: 'Needs reviewed games before it says much.' },
+  { name: 'Finished-game and solved-puzzle analysis on websites', status: 'Beta', note: 'Unlocks only when the page shows a game-over or solved state; verified on stand-in pages, real site markup may change.' },
+  { name: 'Engine Lab (benchmarks, self-play)', status: 'Experimental', note: 'Advanced; uses a full CPU core while running.' },
   { name: 'Game Review, Coach, Memory, Openings', status: 'Stable', note: '' },
   { name: 'Threat Vision, Neural Map, What-If Simulator', status: 'Stable', note: 'Heuristic explanations are labelled as such.' },
   { name: 'Play MOTH', status: 'Stable', note: '' },
