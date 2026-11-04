@@ -33,6 +33,10 @@ export interface StoredModel { id?: number; modelId: string; meta: import('@/mot
 /** Measured engine move latencies (move requests, not analysis). */
 export interface LatencySample { id?: number; at: number; ms: number; source: 'book' | 'cache' | 'search' | 'ponder'; engine: string; context: 'play' | 'board' | 'bench' }
 
+/** 3.0 — a line in the user's opening repertoire (from the side they play). */
+export interface RepertoireLine { id?: number; color: 'w' | 'b'; name: string; uci: string[]; key: string; createdAt: number; drilled: number; correct: number; dueAt: number; box: number }
+/** 3.0 — one completed training item (endgame drill, repertoire drill, exercise) for history and adaptation. */
+export interface TrainingLog { id?: number; at: number; kind: 'endgame' | 'repertoire' | 'exercise' | 'play'; itemId: string; success: boolean; level?: number; detail?: string }
 export interface TrainingRun { id?: number; at: number; status: 'running' | 'done' | 'failed' | 'cancelled'; log: string[]; candidateId?: string; promoted?: boolean; params: Record<string, unknown> }
 
 export class MothDB extends Dexie {
@@ -51,6 +55,8 @@ export class MothDB extends Dexie {
   models!: Table<StoredModel, number>;
   latency!: Table<LatencySample, number>;
   runs!: Table<TrainingRun, number>;
+  repertoire!: Table<RepertoireLine, number>;
+  trainingLog!: Table<TrainingLog, number>;
 
   constructor(name = 'moth-chess') {
     super(name);
@@ -97,6 +103,11 @@ export class MothDB extends Dexie {
       latency: '++id, at, source, context',
       runs: '++id, at, status',
     });
+    // v4 (MOTH Chess 3.0) — opening repertoire and training history. Additive: no existing data is touched.
+    this.version(4).stores({
+      repertoire: '++id, color, key, dueAt',
+      trainingLog: '++id, at, kind, itemId',
+    });
   }
 }
 
@@ -120,5 +131,5 @@ export function db(): MothDB {
 /** Tests use isolated databases. */
 export function setDb(d: MothDB | null) { instance = d; }
 
-export const TABLES = ['games', 'reviews', 'positions', 'openings', 'sessions', 'trees', 'exercises', 'attempts', 'annotations', 'folders', 'simulations', 'practice', 'models', 'latency', 'runs'] as const;
+export const TABLES = ['games', 'reviews', 'positions', 'openings', 'sessions', 'trees', 'exercises', 'attempts', 'annotations', 'folders', 'simulations', 'practice', 'models', 'latency', 'runs', 'repertoire', 'trainingLog'] as const;
 export type TableName = (typeof TABLES)[number];

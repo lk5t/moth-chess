@@ -4,7 +4,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Board } from '@/components/Board';
 import { MoveList } from '@/components/MoveList';
 import { useApp } from '@/components/AppContext';
-import { applyMove, gameStatus, START_FEN } from '@/chess/position';
+import { applyMove, gameStatus, START_FEN, validateFen } from '@/chess/position';
+import { ENDGAME_DRILLS } from '@/endgame/endgame';
+import { logTraining } from '@/training/adaptive';
 import type { MoveRecord, Orientation } from '@/types';
 import { MothPlayClient, type Clock } from './client';
 import { analyseUserMoves, buildProfile, practiceGames, preparation, savePractice } from './adaptation';
@@ -57,14 +59,29 @@ export function PlayView() {
   const [savedId, setSavedId] = useState<number | null>(null);
   const [lastLatency, setLastLatency] = useState<{ ms: number; source: string } | null>(null);
   const [adapting, setAdapting] = useState(false);
+  // 3.0: custom starting positions (current board, endgame drills) and drill goals
+  const [startKind, setStartKind] = useState<'standard' | 'board' | 'drill'>('standard');
+  const [drillId, setDrillId] = useState(ENDGAME_DRILLS[0].id);
+  const [rootFen, setRootFen] = useState(START_FEN);
+  const rootRef = useRef(START_FEN); // read inside callbacks created before the state update lands
+  const [activeDrill, setActiveDrill] = useState<(typeof ENDGAME_DRILLS)[number] | null>(null);
+  const lastEval = useRef<number | null>(null); // MOTH's last evaluation, White's view, centipawns
+  useEffect(() => {
+    // Practice → "Play this drill" hands the drill over through sessionStorage
+    try {
+      const id = sessionStorage.getItem('moth.play.drill');
+      if (id && ENDGAME_DRILLS.some((d) => d.id === id)) { setStartKind('drill'); setDrillId(id); const d = ENDGAME_DRILLS.find((x) => x.id === id)!; setColor(d.side); setLevel(Math.min(7, 3 + d.level)); }
+      sessionStorage.removeItem('moth.play.drill');
+    } catch { /* storage unavailable */ }
+  }, []);
   const client = useRef<MothPlayClient | null>(null);
   const turnStart = useRef(0);
   const gameToken = useRef(0);
 
   const lv = LEVELS.find((l) => l.id === level)!;
   const tc = CLOCKS.find((c) => c.id === clockId)!;
-  const fen = moves.length ? moves[moves.length - 1].fenAfter : START_FEN;
-  const history = useMemo(() => [START_FEN, ...moves.map((m) => m.fenAfter)].slice(0, -1), [moves]);
+  const fen = moves.length ? moves[moves.length - 1].fenAfter : rootFen;
+  const history = useMemo(() => [rootFen, ...moves.map((m) => m.fenAfter)].slice(0, -1), [moves, rootFen]);
   const status = useMemo(() => gameStatus(fen, history), [fen, history]);
   const turn = fen.split(' ')[1] as 'w' | 'b';
   const orientation: Orientation = userColor === 'w' ? 'white' : 'black';
@@ -119,15 +136,16 @@ export function PlayView() {
     setThinking(true);
     const uci = mv.map((m) => m.uci);
     const clockArg: Clock | null = clk ? { wtime: clk.w, btime: clk.b, winc: tc.inc, binc: tc.inc } : null;
-    const r = await c.requestMove(START_FEN, uci, clockArg, lv.movetime);
+    const r = await c.requestMove(rootRef.current, uci, clockArg, lv.movetime);
     if (token !== gameToken.current) return; // game ended / restarted meanwhile
-    const cur = mv.length ? mv[mv.length - 1].fenAfter : START_FEN;
+    const cur = mv.length ? mv[mv.length - 1].fenAfter : rootRef.current;
     const rec = applyMove(cur, r.best);
     setThinking(false);
     if (!rec) { setInfo('MOTH returned no legal move'); return; }
     setLastLatency({ ms: r.ms, source: r.source });
     const stm = cur.split(' ')[1] as 'w' | 'b';
     const score = r.mate !== undefined ? toWhite({ type: 'mate', value: r.mate }, stm) : r.scoreCp !== undefined ? toWhite({ type: 'cp', value: r.scoreCp }, stm) : undefined;
+    if (score) lastEval.current = score.type === 'mate' ? (score.value > 0 ? 10000 : -10000) : score.value;
     setInfo(`${r.book ? `Book: ${r.book}` : r.source === 'ponder' ? 'Predicted your move (pondering)' : r.source === 'cache' ? 'Prepared reply' : `Searched${r.depth ? ` to depth ${r.depth}` : ''}`}${score ? ` · eval ${formatScore(score)}` : ''}`);
     const next = [...mv, rec];
     setMoves(next);
@@ -138,12 +156,15 @@ export function PlayView() {
     // predictive pondering on the user's time (only MOTH's own offline game)
     if (settings.moth.ponder && r.ponder && !gameStatus(rec.fenAfter).over) {
       const nextClock = clk ? { wtime: clk.w, btime: clk.b, winc: tc.inc, binc: tc.inc } : null;
-      c.startPonder(START_FEN, [...next.map((m) => m.uci), r.ponder], nextClock, lv.movetime);
+      c.startPonder(rootRef.current, [...next.map((m) => m.uci), r.ponder], nextClock, lv.movetime);
     }
   }, [lv.movetime, tc.inc, settings.moth.ponder]);
 
   const start = async () => {
-    const uc = color === 'random' ? (Math.random() < 0.5 ? 'w' : 'b') : color;
+    const drill = startKind === 'drill' ? ENDGAME_DRILLS.find((d) => d.id === drillId)! : null;
+    const startFen = drill ? drill.fen : startKind === 'board' && validateFen(app.fen).ok ? app.fen : START_FEN;
+    setRootFen(startFen); rootRef.current = startFen; setActiveDrill(drill); lastEval.current = null;
+    const uc = drill ? drill.side : color === 'random' ? (Math.random() < 0.5 ? 'w' : 'b') : color;
     gameToken.current++;
     client.current?.terminate();
     const prep = settings.moth.learning ? preparation(await practiceGames()) : '';
@@ -154,7 +175,19 @@ export function PlayView() {
     setClock(clk);
     setPhase('playing');
     turnStart.current = performance.now();
-    if (uc === 'b') void mothMove([], clk);
+    if (startFen.split(' ')[1] !== uc) void mothMove([], clk);
+  };
+
+  // draw offers: MOTH accepts when it does not think it is better (its last evaluation ≤ +0.3 for itself)
+  // after move 20, or straight away in a dead-drawn position; otherwise it explains why it declines.
+  const offerDraw = () => {
+    if (phase !== 'playing' || thinking) return;
+    const ev = lastEval.current;
+    const mothWhite = userColor === 'b';
+    const forMoth = ev === null ? 0 : mothWhite ? ev : -ev;
+    const insufficient = gameStatus(fen).reason === 'insufficient-material';
+    if (insufficient || (moves.length >= 40 && forMoth <= 30)) finish('1/2-1/2', 'draw agreed');
+    else setInfo(moves.length < 40 ? 'MOTH declines: it is too early for a draw (before move 20).' : `MOTH declines: it thinks it is better (${(forMoth / 100).toFixed(1)} for MOTH).`);
   };
 
   const onUserMove = (uci: string): boolean => {
@@ -182,6 +215,15 @@ export function PlayView() {
     setMoves((m) => m.slice(0, Math.max(0, m.length - back)));
   };
 
+  // drills: record the outcome against the drill's goal (training history + adaptive difficulty)
+  useEffect(() => {
+    if (phase !== 'over' || !result || !activeDrill) return;
+    const userWon = result.result !== '1/2-1/2' && (result.result === '1-0') === (userColor === 'w');
+    const success = activeDrill.goal === 'win' ? userWon : result.result === '1/2-1/2' || userWon;
+    void logTraining({ at: Date.now(), kind: 'endgame', itemId: activeDrill.id, success, level: activeDrill.level, detail: result.reason });
+    setInfo(success ? `Drill complete: “${activeDrill.title}” — goal reached.` : `Drill not solved yet: the goal was to ${activeDrill.goal}. Hint: ${activeDrill.hint}`);
+  }, [phase, result]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const resign = () => finish(userColor === 'w' ? '0-1' : '1-0', `${userColor === 'w' ? 'White' : 'Black'} resigned`);
 
   const pgn = useMemo(() => {
@@ -189,11 +231,19 @@ export function PlayView() {
       Event: 'MOTH Practice', Site: 'MOTH Chess (offline)', Date: new Date().toISOString().slice(0, 10).replace(/-/g, '.'),
       White: userColor === 'w' ? 'You' : mothName, Black: userColor === 'b' ? 'You' : mothName,
       Result: result?.result ?? '*', TimeControl: tc.base ? `${tc.base / 1000}+${tc.inc / 1000}` : '-', Termination: result?.reason ?? '',
+      ...(rootFen !== START_FEN ? { SetUp: '1', FEN: rootFen } : {}),
     };
     const head = Object.entries(h).map(([k, v]) => `[${k} "${v}"]`).join('\n');
-    const body = moves.map((m, i) => (i % 2 === 0 ? `${i / 2 + 1}. ${m.san}` : m.san)).join(' ');
+    // numbering follows the start position (a game may start with Black to move)
+    const blackFirst = rootFen.split(' ')[1] === 'b';
+    const n0 = Number(rootFen.split(' ')[5]) || 1;
+    const body = moves.map((m, i) => {
+      const ply = i + (blackFirst ? 1 : 0);
+      const no = n0 + Math.floor(ply / 2);
+      return ply % 2 === 0 ? `${no}. ${m.san}` : i === 0 ? `${no}... ${m.san}` : m.san;
+    }).join(' ');
     return `${head}\n\n${body} ${result?.result ?? '*'}`;
-  }, [moves, result, userColor, mothName, tc]);
+  }, [moves, result, userColor, mothName, tc, rootFen]);
 
   // when the game ends: save to Memory, then (if learning is on) analyse it for personal adaptation
   useEffect(() => {
@@ -209,7 +259,7 @@ export function PlayView() {
       try {
         const uci = moves.map((m) => m.uci);
         const userMoves = await analyseUserMoves(getBatchEngine('moth', { Style: 'Balanced', EvalFile: settings.moth.model }), uci, userColor, 9);
-        const op = recogniseOpening([START_FEN, ...moves.map((m) => m.fenAfter)]).opening;
+        const op = recogniseOpening([rootFen, ...moves.map((m) => m.fenAfter)]).opening;
         await savePractice({ gameId: id ?? undefined, at: Date.now(), userColor, style, level, timeControl: tc.id, result: result.result, reason: result.reason, uci, openingKey: uci.slice(0, 8).join(' '), openingName: op?.name, eco: op?.eco, userMoves });
         const prof = buildProfile(await practiceGames());
         if (!cancelled) app.toast(`Saved to Memory · personal profile updated (${prof.games} practice game${prof.games === 1 ? '' : 's'})`);
@@ -239,8 +289,19 @@ export function PlayView() {
           <div className="card stack" aria-label="New game setup">
             <h2 style={{ margin: 0 }}>Play against MOTH</h2>
             <p className="small muted" style={{ margin: 0 }}>Offline practice against the MOTH Engine. Nothing leaves your device.</p>
-            <label className="label">Your colour</label>
-            <div className="row">
+            <label className="label" htmlFor="moth-start">Starting position</label>
+            <select id="moth-start" className="input" value={startKind} onChange={(e) => setStartKind(e.target.value as 'standard' | 'board' | 'drill')}>
+              <option value="standard">Standard starting position</option>
+              <option value="board">Position on the analysis board</option>
+              <option value="drill">Endgame training position</option>
+            </select>
+            {startKind === 'drill' && (
+              <select className="input" aria-label="Endgame drill" value={drillId} onChange={(e) => setDrillId(e.target.value)}>
+                {ENDGAME_DRILLS.map((d) => <option key={d.id} value={d.id}>{'★'.repeat(d.level)} {d.title} — {d.side === 'w' ? 'White' : 'Black'} to {d.goal}</option>)}
+              </select>
+            )}
+            {startKind !== 'drill' && <label className="label">Your colour</label>}
+            <div className="row" style={{ display: startKind === 'drill' ? 'none' : undefined }}>
               {(['w', 'b', 'random'] as const).map((c) => <button key={c} className={`btn ${color === c ? 'primary' : ''}`} aria-pressed={color === c} onClick={() => setColor(c)}>{c === 'w' ? 'White' : c === 'b' ? 'Black' : 'Random'}</button>)}
             </div>
             <label className="label">Style</label>
@@ -261,6 +322,7 @@ export function PlayView() {
           <div className="card stack">
             <div className="row wrap">
               <button className="btn" onClick={() => void undo()} disabled={!allowUndo || phase !== 'playing' || thinking || moves.length < (userColor === 'w' ? 1 : 2)}>Take back</button>
+              <button className="btn" onClick={offerDraw} disabled={phase !== 'playing' || thinking}>Offer draw</button>
               <button className="btn danger" onClick={resign} disabled={phase !== 'playing'}>Resign</button>
               <button className="btn" onClick={() => { client.current?.terminate(); client.current = null; setPhase('setup'); }}>New game</button>
               {phase === 'over' && <button className="btn primary" disabled={!savedId || savedId < 0} onClick={() => { app.loadPgn(pgn, savedId ?? undefined); app.setTab('review'); }}>Review game</button>}
@@ -275,7 +337,7 @@ export function PlayView() {
         )}
         {phase !== 'setup' && (
           <div className="card" style={{ padding: 10 }}>
-            <MoveList moves={moves} cursor={moves.length} onGoto={() => {}} startFen={START_FEN} />
+            <MoveList moves={moves} cursor={moves.length} onGoto={() => {}} startFen={rootFen} />
           </div>
         )}
       </div>

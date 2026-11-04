@@ -1,5 +1,5 @@
 // Game/variation state for the built-in analysis board.
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import type { MoveRecord, Square } from '@/types';
 import { START_FEN, applyMove, gameStatus, parsePgn, validateFen } from '@/chess/position';
 
@@ -12,7 +12,21 @@ export interface GameState {
 }
 
 export function useGame(initialFen = START_FEN) {
-  const [g, setG] = useState<GameState>({ rootFen: validateFen(initialFen).fen ?? START_FEN, moves: [], cursor: 0, headers: {} });
+  const [g, setRaw] = useState<GameState>({ rootFen: validateFen(initialFen).fen ?? START_FEN, moves: [], cursor: 0, headers: {} });
+  // Undo/redo (3.0): every edit of the move list (new move, new variation, load, reset) is undoable;
+  // stepping through moves is navigation, not an edit.
+  const past = useRef<GameState[]>([]);
+  const future = useRef<GameState[]>([]);
+  const [, bump] = useState(0);
+  const setG = useCallback((f: (s: GameState) => GameState) => {
+    setRaw((s) => {
+      const n = f(s);
+      if (n !== s && (n.moves !== s.moves || n.rootFen !== s.rootFen)) { past.current = [...past.current.slice(-99), s]; future.current = []; }
+      return n;
+    });
+    bump((x) => x + 1);
+  }, []);
+  const setNav = setRaw;
   const fen = g.cursor === 0 ? g.rootFen : g.moves[g.cursor - 1].fenAfter;
   const lastMove: [Square, Square] | undefined = g.cursor > 0 ? [g.moves[g.cursor - 1].from, g.moves[g.cursor - 1].to] : undefined;
   const history = useMemo(() => [g.rootFen, ...g.moves.slice(0, g.cursor).map((m) => m.fenAfter)].slice(0, -1), [g]);
@@ -31,26 +45,40 @@ export function useGame(initialFen = START_FEN) {
       return { ...s, moves: [...s.moves.slice(0, s.cursor), r], cursor: s.cursor + 1, gameId: s.cursor < s.moves.length ? undefined : s.gameId };
     });
     return ok;
-  }, []);
+  }, [setG]);
 
-  const goto = useCallback((ply: number) => setG((s) => ({ ...s, cursor: Math.max(0, Math.min(s.moves.length, ply)) })), []);
-  const step = useCallback((d: number) => setG((s) => ({ ...s, cursor: Math.max(0, Math.min(s.moves.length, s.cursor + d)) })), []);
+  const goto = useCallback((ply: number) => setNav((s) => ({ ...s, cursor: Math.max(0, Math.min(s.moves.length, ply)) })), []);
+  const step = useCallback((d: number) => setNav((s) => ({ ...s, cursor: Math.max(0, Math.min(s.moves.length, s.cursor + d)) })), []);
   const loadFen = useCallback((f: string) => {
     const v = validateFen(f);
     if (!v.ok || !v.fen) throw new Error(v.error);
-    setG({ rootFen: v.fen, moves: [], cursor: 0, headers: {} });
-  }, []);
+    setG(() => ({ rootFen: v.fen!, moves: [], cursor: 0, headers: {} }));
+  }, [setG]);
   const loadPgn = useCallback((pgn: string, gameId?: number, toPly?: number) => {
     const p = parsePgn(pgn);
-    setG({ rootFen: p.startFen, moves: p.moves, cursor: toPly ?? p.moves.length, headers: p.headers, gameId });
-  }, []);
+    setG(() => ({ rootFen: p.startFen, moves: p.moves, cursor: toPly ?? p.moves.length, headers: p.headers, gameId }));
+  }, [setG]);
   const loadLine = useCallback((rootFen: string, uciMoves: string[], cursor?: number) => {
     const moves: MoveRecord[] = [];
     let cur = rootFen;
     for (const u of uciMoves) { const r = applyMove(cur, u); if (!r) break; moves.push(r); cur = r.fenAfter; }
-    setG({ rootFen, moves, cursor: cursor ?? moves.length, headers: {} });
+    setG(() => ({ rootFen, moves, cursor: cursor ?? moves.length, headers: {} }));
+  }, [setG]);
+  const reset = useCallback(() => setG(() => ({ rootFen: START_FEN, moves: [], cursor: 0, headers: {} })), [setG]);
+  const undo = useCallback(() => {
+    const prev = past.current[past.current.length - 1];
+    if (!prev) return false;
+    setRaw((s) => { past.current = past.current.slice(0, -1); future.current = [s, ...future.current]; return prev; });
+    bump((x) => x + 1);
+    return true;
   }, []);
-  const reset = useCallback(() => setG({ rootFen: START_FEN, moves: [], cursor: 0, headers: {} }), []);
+  const redo = useCallback(() => {
+    const next = future.current[0];
+    if (!next) return false;
+    setRaw((s) => { future.current = future.current.slice(1); past.current = [...past.current, s]; return next; });
+    bump((x) => x + 1);
+    return true;
+  }, []);
 
-  return { state: g, fen, lastMove, status, play, goto, step, loadFen, loadPgn, loadLine, reset };
+  return { state: g, fen, lastMove, status, play, goto, step, loadFen, loadPgn, loadLine, reset, undo, redo, canUndo: past.current.length > 0, canRedo: future.current.length > 0 };
 }

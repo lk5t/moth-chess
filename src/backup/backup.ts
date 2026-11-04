@@ -12,7 +12,7 @@ export const BACKUP_FORMAT = 'moth-chess-backup';
 export const BACKUP_VERSION = 3;
 export const MAX_BACKUP_BYTES = 200 * 1024 * 1024;
 
-const KNOWN_TABLES = ['games', 'reviews', 'positions', 'openings', 'sessions', 'trees', 'exercises', 'attempts', 'annotations', 'folders', 'simulations', 'practice', 'latency', 'runs'];
+const KNOWN_TABLES = ['games', 'reviews', 'positions', 'openings', 'sessions', 'trees', 'exercises', 'attempts', 'annotations', 'folders', 'simulations', 'practice', 'latency', 'runs', 'repertoire', 'trainingLog'];
 
 export interface BackupFile {
   format: typeof BACKUP_FORMAT;

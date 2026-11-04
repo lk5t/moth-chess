@@ -132,7 +132,9 @@ describe('database migrations', () => {
     const v2 = new MothDB(name);
     setDb(v2);
     await v2.open();
-    expect(v2.verno).toBe(3); // migrates straight to the latest schema
+    expect(v2.verno).toBe(4); // migrates straight to the latest schema
+    expect(await v2.repertoire.count()).toBe(0); // 3.0 tables exist
+    expect(await v2.trainingLog.count()).toBe(0);
     expect(await v2.practice.count()).toBe(0); // v3 tables exist
     expect(await v2.models.count()).toBe(0);
     const g = (await v2.games.toArray())[0];
@@ -143,5 +145,24 @@ describe('database migrations', () => {
     expect(typeof e.dueAt).toBe('number');
     expect((await v2.positions.toArray())[0].linkedGameIds).toEqual([]);
     expect(await v2.reviews.count()).toBe(0); // new table exists
+  });
+});
+
+describe('3.0 schema v4 migration keeps 2.x data', () => {
+  it('opens a v3 database with data and adds the 3.0 tables without touching existing rows', async () => {
+    const name = `moth-migrate-v3-${++n}`;
+    const v3 = new MothDB(name);
+    await v3.open();
+    await v3.games.add({ pgn: G1, headers: {}, white: 'Alice', black: 'Bob', result: '1-0', plyCount: 6, contentHash: 'h1', importedAt: 1, tags: [] } as never);
+    await v3.practice.add({ at: 5, userColor: 'w', result: '1-0' } as never);
+    v3.close();
+    const v4 = new MothDB(name);
+    await v4.open();
+    expect(v4.verno).toBe(4);
+    expect(await v4.games.count()).toBe(1);
+    expect(await v4.practice.count()).toBe(1);
+    await v4.repertoire.add({ color: 'w', name: 'Italian', uci: ['e2e4'], key: 'w:e2e4', createdAt: 1, drilled: 0, correct: 0, dueAt: 0, box: 0 });
+    expect(await v4.repertoire.count()).toBe(1);
+    v4.close();
   });
 });

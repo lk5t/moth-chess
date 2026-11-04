@@ -15,7 +15,7 @@ need(m.action?.default_popup ?? 'popup.html');
 need(m.options_page ?? 'options.html');
 for (const s of Object.values(m.icons ?? {})) need(s);
 ['board.html', 'overlay.html', 'control.html', 'welcome.html', 'icons/moth.svg', 'content.js', 'engines/stockfish.js', 'engines/stockfish.wasm',
-  'moth-worker.js', 'moth-train-worker.js', 'moth-engine/moth.wasm', 'moth-engine/book.json', 'moth-engine/tactics.json', 'moth-engine/models/registry.json'].forEach(need);
+  'moth-worker.js', 'moth-train-worker.js', 'moth-lab-worker.js', 'moth-engine/moth.wasm', 'moth-engine/book.json', 'moth-engine/tactics.json', 'moth-engine/models/registry.json'].forEach(need);
 if (existsSync(resolve(dist, 'moth-engine/models/registry.json'))) {
   const reg = JSON.parse(readFileSync(resolve(dist, 'moth-engine/models/registry.json'), 'utf8'));
   for (const mdl of reg.models ?? []) need(`moth-engine/models/${mdl.file}`);

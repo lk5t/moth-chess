@@ -733,16 +733,28 @@ static void tt_alloc(int mb) {
 }
 static inline int score_to_tt(int s, int ply) { return s > MATE_BOUND ? s + ply : s < -MATE_BOUND ? s - ply : s; }
 static inline int score_from_tt(int s, int ply) { return s > MATE_BOUND ? s - ply : s < -MATE_BOUND ? s + ply : s; }
-static inline TTEntry* tt_probe(u64 key) { return &TT[(u32)key & tt_mask]; }
-static void tt_store(u64 key, int depth, int score, int flag, Move m, int ev, int ply) {
-  TTEntry* e = tt_probe(key);
+// 3.0: two-entry buckets. Probe returns the entry holding this key (either slot), else slot 0.
+static inline TTEntry* tt_probe(u64 key) {
+  TTEntry* b = &TT[((u32)key & tt_mask) & ~1u];
   u32 k32 = (u32)(key >> 32);
-  int oldAge = e->flag_age >> 2;
-  if (e->key32 == k32 || oldAge != tt_age || depth >= e->depth || flag == TT_EXACT) {
-    if (!m && e->key32 == k32) m = e->move;
-    e->key32 = k32; e->move = (u16)(m & 0xFFFF); e->score = (i16)score_to_tt(score, ply); e->eval = (i16)ev;
-    e->depth = (u8)imax(0, depth); e->flag_age = (u8)(flag | (tt_age << 2));
+  return b[1].key32 == k32 ? &b[1] : &b[0];
+}
+static void tt_store(u64 key, int depth, int score, int flag, Move m, int ev, int ply) {
+  TTEntry* b = &TT[((u32)key & tt_mask) & ~1u];
+  u32 k32 = (u32)(key >> 32);
+  // same position → that slot; otherwise replace the less valuable slot (shallower, or from an older search)
+  TTEntry* e;
+  if (b[0].key32 == k32) e = &b[0];
+  else if (b[1].key32 == k32) e = &b[1];
+  else {
+    int v0 = b[0].depth - 8 * (((b[0].flag_age >> 2) != tt_age) ? 1 : 0);
+    int v1 = b[1].depth - 8 * (((b[1].flag_age >> 2) != tt_age) ? 1 : 0);
+    e = v0 <= v1 ? &b[0] : &b[1];
   }
+  if (e->key32 == k32 && depth + 2 < e->depth && flag != TT_EXACT && (e->flag_age >> 2) == tt_age) return; // keep deeper info
+  if (!m && e->key32 == k32) m = e->move;
+  e->key32 = k32; e->move = (u16)(m & 0xFFFF); e->score = (i16)score_to_tt(score, ply); e->eval = (i16)ev;
+  e->depth = (u8)imax(0, depth); e->flag_age = (u8)(flag | (tt_age << 2));
 }
 // TT stores 16 move bits: from/to/promo + low flag bit. Recover the full move from the legal list.
 static inline bool same_move16(Move full, u16 m16) { return (full & 0xFFFF) == m16; }
@@ -750,6 +762,17 @@ static inline bool same_move16(Move full, u16 m16) { return (full & 0xFFFF) == m
 // ─── search ───────────────────────────────────────────────────────────────────
 static Move KILLERS[MAX_PLY][2];
 static int HISTORY[2][64][64];
+// 3.0: countermove heuristic (reply that refuted the opponent's last move), static-eval stack for the
+// "improving" signal, and a logarithmic late-move-reduction table.
+static Move COUNTER[64][64];
+static int EVAL_STACK[MAX_PLY + 2];
+static u8 LMR[64][64];
+static const int HIST_MAX = 1 << 14;
+static inline void hist_update(int& h, int bonus) { // gravity: entries saturate at ±HIST_MAX instead of overflowing
+  h += bonus - h * iabs(bonus) / HIST_MAX;
+}
+static float mc_ln(float x) { float y = (x - 1) / (x + 1), y2 = y * y, t = y, r = 0; for (int k = 1; k < 40; k += 2) { r += t / k; t *= y2; } return 2 * r; }
+static inline Move prev_move() { return hply > 0 ? UNDO[hply - 1].move : 0; }
 static Move PV[MAX_PLY][MAX_PLY];
 static int PV_LEN[MAX_PLY];
 static u64 nodes = 0, node_limit = 0;
@@ -783,6 +806,8 @@ static bool is_repetition() {
 }
 
 static void score_moves(MoveList& l, Move ttMove, int ply) {
+  Move pm = prev_move();
+  Move cm = pm ? COUNTER[m_from(pm)][m_to(pm)] : 0;
   for (int i = 0; i < l.n; i++) {
     Move m = l.m[i];
     int sc;
@@ -794,6 +819,7 @@ static void score_moves(MoveList& l, Move ttMove, int ply) {
     }
     else if (m == KILLERS[ply][0]) sc = (1 << 26) + 2;
     else if (m == KILLERS[ply][1]) sc = (1 << 26) + 1;
+    else if (cm && m == cm) sc = (1 << 26);
     else sc = HISTORY[P.side][m_from(m)][m_to(m)];
     l.score[i] = sc;
   }
@@ -870,10 +896,13 @@ static int search(int alpha, int beta, int depth, int ply, bool pv, bool nullOk)
     }
   }
   int static_eval = check ? -INF : (ttEval != -INF ? ttEval : evaluate());
+  EVAL_STACK[ply] = static_eval;
+  // improving: our static eval is better than two plies ago → prune less, reduce less
+  bool improving = !check && ply >= 2 && EVAL_STACK[ply - 2] != -INF && static_eval > EVAL_STACK[ply - 2];
 
   if (!pv && !check && !root) {
     // reverse futility pruning
-    if (depth <= 6 && static_eval - 80 * depth >= beta && iabs(beta) < MATE_BOUND) return static_eval;
+    if (depth <= 6 && static_eval - (80 - 20 * improving) * depth >= beta && iabs(beta) < MATE_BOUND) return static_eval;
     // null move pruning
     u64 nonpawn = P.occ[P.side] & ~P.bb[P.side][PAWN] & ~P.bb[P.side][KING];
     if (nullOk && depth >= 3 && static_eval >= beta && nonpawn) {
@@ -890,14 +919,19 @@ static int search(int alpha, int beta, int depth, int ply, bool pv, bool nullOk)
   score_moves(l, ttMove, ply);
   int legal = 0, best = -INF, origAlpha = alpha;
   Move bestMove = 0;
+  Move quietsTried[64]; int nq = 0;
+  bool futile = !pv && !check && !root && depth <= 3 && iabs(alpha) < MATE_BOUND && static_eval + 120 + 110 * depth <= alpha;
   for (int i = 0; i < l.n; i++) {
     Move m = pick(l, i);
     if (root) { bool ex = false; for (int k = 0; k < root_excluded_n; k++) if (root_excluded[k] == m) ex = true; if (ex) continue; }
     bool quiet = P.sq[m_to(m)] == NO_PIECE && m_flag(m) != F_EP && !m_promo(m);
     // late move pruning of quiet moves at shallow depth
-    if (!root && !pv && !check && quiet && legal >= 4 + depth * depth && best > -MATE_BOUND) continue;
+    if (!root && !pv && !check && quiet && legal >= (3 + depth * depth) / (2 - improving) && best > -MATE_BOUND) continue;
     if (!make_legal(m)) continue;
     legal++;
+    // futility pruning: a quiet move that does not give check cannot lift a hopeless static eval above alpha
+    if (futile && quiet && legal > 1 && best > -MATE_BOUND && !in_check()) { unmake_move(); continue; }
+    if (quiet && nq < 64) quietsTried[nq++] = m;
     PV_LEN[ply + 1] = ply + 1;
     int bonus = root ? root_bonus(m) : 0;
     bool givesCheck = in_check();
@@ -914,8 +948,10 @@ static int search(int alpha, int beta, int depth, int ply, bool pv, bool nullOk)
     else {
       int r = 0;
       if (depth >= 3 && quiet && !check && !givesCheck && legal > 3) {
-        r = 1 + (legal > 8) + (depth > 7) - (pv ? 1 : 0);
+        r = LMR[imin(depth, 63)][imin(legal, 63)] - (pv ? 1 : 0) - improving;
         if (m == KILLERS[ply][0] || m == KILLERS[ply][1]) r--;
+        int h = HISTORY[P.side ^ 1][m_from(m)][m_to(m)]; // side already switched by make_move
+        if (h < -HIST_MAX / 4) r++; else if (h > HIST_MAX / 2) r--;
         if (r < 0) r = 0;
         if (r > depth - 2) r = depth - 2;
       }
@@ -935,8 +971,12 @@ static int search(int alpha, int beta, int depth, int ply, bool pv, bool nullOk)
         if (s >= beta) {
           if (quiet) {
             if (KILLERS[ply][0] != m) { KILLERS[ply][1] = KILLERS[ply][0]; KILLERS[ply][0] = m; }
-            int& h = HISTORY[P.side][m_from(m)][m_to(m)];
-            h += depth * depth; if (h > (1 << 24)) for (int a = 0; a < 2; a++) for (int b = 0; b < 64; b++) for (int c = 0; c < 64; c++) HISTORY[a][b][c] /= 2;
+            int bonus = imin(depth * depth * 16, 1600);
+            hist_update(HISTORY[P.side][m_from(m)][m_to(m)], bonus);
+            // malus for the quiet moves that were tried first and failed
+            for (int q = 0; q < nq; q++) if (quietsTried[q] != m) hist_update(HISTORY[P.side][m_from(quietsTried[q])][m_to(quietsTried[q])], -bonus);
+            Move pm = prev_move();
+            if (pm) COUNTER[m_from(pm)][m_to(pm)] = m;
           }
           break;
         }
@@ -995,7 +1035,7 @@ static bool have_prev = false;
 static void search_begin() {
   tt_age = (u8)((tt_age + 1) & 63);
   for (int i = 0; i < MAX_PLY; i++) KILLERS[i][0] = KILLERS[i][1] = 0;
-  for (int a = 0; a < 2; a++) for (int b = 0; b < 64; b++) for (int c = 0; c < 64; c++) HISTORY[a][b][c] /= 8;
+  for (int a = 0; a < 2; a++) for (int b = 0; b < 64; b++) for (int c = 0; c < 64; c++) HISTORY[a][b][c] /= 2;
   nodes = 0; seldepth = 0; lines_n = 0; have_prev = false; aborted = false;
   root_hply = hply;
   root_side = P.side;
@@ -1045,6 +1085,12 @@ EXPORT(mc_init) int mc_init(int hashMb) {
   if (!initialised) {
     init_tables();
     for (int s = 0; s < 64; s++) CR_MASK[s] = 15;
+    for (int d = 0; d < 64; d++) for (int m = 0; m < 64; m++) {
+      // r = 0.75 + ln(d)·ln(m)/2.25 (no libm in freestanding WASM: ln via the atanh series)
+      float ld = mc_ln((float)(d ? d : 1)), lm = mc_ln((float)(m ? m : 1));
+      int r = (int)(0.75f + ld * lm / 2.25f);
+      LMR[d][m] = (u8)(d < 3 || m < 2 ? 0 : imin(r, 6));
+    }
     CR_MASK[4] &= ~3; CR_MASK[7] &= ~1; CR_MASK[0] &= ~2; CR_MASK[60] &= ~12; CR_MASK[63] &= ~4; CR_MASK[56] &= ~8;
     initialised = true;
   }
@@ -1055,6 +1101,7 @@ EXPORT(mc_init) int mc_init(int hashMb) {
 EXPORT(mc_new_game) void mc_new_game() {
   if (TT) memset(TT, 0, (unsigned long)(tt_mask + 1) * sizeof(TTEntry));
   memset(HISTORY, 0, sizeof(HISTORY));
+  memset(COUNTER, 0, sizeof(COUNTER));
 }
 /** Set position from the FEN in IO. Returns 1 on success. */
 EXPORT(mc_set_fen) int mc_set_fen() { return set_fen(IO) ? 1 : 0; }

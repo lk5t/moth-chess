@@ -55,8 +55,8 @@ test('import → review → coach exercise → dashboard, all local and persiste
   await page.screenshot({ path: 'test-results/workflow-review.png' });
 
   // coach: an exercise was generated from the user's own blunder
-  await page.getByRole('button', { name: 'Train', exact: true }).click();
-  await page.getByRole('tab', { name: 'Coach', exact: true }).click();
+  await page.getByRole('navigation', { name: 'MOTH workspaces' }).getByRole('button', { name: 'Train', exact: true }).click();
+  await page.locator('.sections').getByRole('tab', { name: 'Coach', exact: true }).click();
   await expect(page.locator('.stat').filter({ hasText: 'Exercises' }).locator('.v')).not.toHaveText('0');
   await page.getByRole('button', { name: 'Custom session' }).click();
   await expect(page.getByText(/Exercise 1\/1/)).toBeVisible();
@@ -70,15 +70,17 @@ test('import → review → coach exercise → dashboard, all local and persiste
   await page.getByRole('button', { name: 'Finish' }).click();
 
   // dashboard reflects the review and the training attempt
-  await page.getByRole('button', { name: 'Library', exact: true }).click();
-  await page.getByRole('tab', { name: 'Progress', exact: true }).click();
+  await page.getByRole('navigation', { name: 'MOTH workspaces' }).getByRole('button', { name: 'Library', exact: true }).click();
+  await page.locator('.sections').getByRole('tab', { name: 'Player DNA', exact: true }).click();
+  await expect(page.getByText('1 reviewed')).toBeVisible();
+  await page.getByText('Detailed statistics and filters').click();
   await expect(page.getByText('Games reviewed').locator('..')).toContainText('1');
   await page.screenshot({ path: 'test-results/workflow-dashboard.png' });
 
   // persistence: the game is still in Memory after a reload
   await page.reload();
-  await page.getByRole('button', { name: 'Library', exact: true }).click();
-  await page.getByRole('tab', { name: 'Games', exact: true }).click();
+  await page.getByRole('navigation', { name: 'MOTH workspaces' }).getByRole('button', { name: 'Library', exact: true }).click();
+  await page.locator('.sections').getByRole('tab', { name: 'Games', exact: true }).click();
   await expect(page.getByText(/opponent.*me|me.*opponent/).first()).toBeVisible();
   expect(errors).toEqual([]);
 });
@@ -86,11 +88,16 @@ test('import → review → coach exercise → dashboard, all local and persiste
 test('What-If simulator explores a variation without modifying the source game', async ({ context, ext }) => {
   const page = await context.newPage();
   await page.goto(ext('board.html'));
+  // 3.0: start from Home's quick analysis box
+  await page.getByRole('textbox', { name: 'FEN or PGN' }).fill('1. e4 e5 2. Nf3 Nc6');
+  await page.getByRole('button', { name: 'Analyze', exact: true }).last().click();
+  await expect(page.getByRole('button', { name: 'Move Nc6' })).toBeVisible();
+  await page.getByText('Load a FEN or PGN').click();
   await page.locator('#moth-fen').fill('1. e4 e5 2. Nf3 Nc6');
   await page.getByRole('button', { name: 'Load', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Move Nc6' })).toBeVisible();
   const fenBefore = await page.locator('#moth-fen').getAttribute('placeholder');
-  await page.getByRole('button', { name: 'Analyze', exact: true }).click();
+  await page.getByRole('navigation', { name: 'MOTH workspaces' }).getByRole('button', { name: 'Analyze', exact: true }).click();
   await page.getByRole('button', { name: /More tools/ }).click();
   await page.getByRole('menuitem', { name: /What-if/ }).click();
   await page.getByRole('button', { name: /Clone current position/ }).click();

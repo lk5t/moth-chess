@@ -34,7 +34,7 @@ test('built-in board runs the bundled engine (MOTH by default) locally and finds
 
 test('starting position analysis reaches the requested depth with 3 lines', async ({ context, ext }) => {
   const page = await context.newPage();
-  await page.goto(ext('board.html'));
+  await page.goto(ext('board.html?tab=analysis'));
   await expect(page.locator('.line')).toHaveCount(3);
   await expect(page.getByText(/depth ([89]|[1-9][0-9])/).first()).toBeVisible({ timeout: 80_000 });
 });
@@ -59,17 +59,17 @@ test('Workspace 3.0: every workspace and section opens; advanced tools sit behin
   for (const a of ['Analyze a position', 'Review a game', 'Train', 'Play MOTH']) await expect(page.locator('.tile.action', { hasText: a })).toBeVisible();
   await page.screenshot({ path: 'test-results/section-home.png' });
   // Engine Lab is hidden in Simple mode
-  await expect(page.getByRole('button', { name: 'Engine Lab', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('navigation', { name: 'MOTH workspaces' }).getByRole('button', { name: 'Engine Lab', exact: true })).toHaveCount(0);
   const plan: [string, string[], string[]][] = [
-    ['Analyze', ['Evaluate', 'Game review', 'Openings'], ['Explain', 'Threats', 'Variation tree', 'What-if']],
-    ['Train', ['Coach', 'Play MOTH'], []],
-    ['Library', ['Games', 'Progress'], []],
+    ['Analyze', ['Evaluate', 'Game review', 'Openings', 'Endgame'], ['Explain', 'Threats', 'Variation tree', 'What-if']],
+    ['Train', ['Coach', 'Practice', 'Play MOTH'], []],
+    ['Library', ['Games', 'Player DNA'], []],
   ];
   for (const [ws, basic, adv] of plan) {
     await page.getByRole('button', { name: ws, exact: true }).click();
     await expect(page.getByRole('heading', { name: ws, exact: true })).toBeVisible();
     for (const s of basic) {
-      await page.getByRole('tab', { name: s, exact: true }).click();
+      await page.locator('.sections').getByRole('tab', { name: s, exact: true }).click();
       await expect(page.locator('.page-head .badge')).toHaveText(s);
       await page.waitForTimeout(300);
       await page.screenshot({ path: `test-results/section-${s.toLowerCase().replace(/[^a-z]+/g, '-')}.png` });
@@ -84,13 +84,13 @@ test('Workspace 3.0: every workspace and section opens; advanced tools sit behin
   }
   // the last section is remembered across reloads
   await page.reload();
-  await expect(page.locator('.page-head .badge')).toHaveText('Progress');
+  await expect(page.locator('.page-head .badge')).toHaveText('Player DNA');
   // Full mode shows Engine Lab and the advanced tabs inline
   await page.goto(ext('options.html'));
   await page.getByRole('group', { name: 'Interface mode' }).getByRole('button', { name: 'Full' }).click();
   await page.goto(ext('board.html?tab=analysis'));
-  await expect(page.getByRole('tab', { name: 'Variation tree', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Engine Lab', exact: true }).click();
+  await expect(page.locator('.sections').getByRole('tab', { name: 'Variation tree', exact: true })).toBeVisible();
+  await page.getByRole('navigation', { name: 'MOTH workspaces' }).getByRole('button', { name: 'Engine Lab', exact: true }).click();
   await expect(page.locator('.page-head .badge')).toHaveText('MOTH Engine');
   expect(errors).toEqual([]);
 });

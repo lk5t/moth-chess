@@ -281,7 +281,12 @@ export async function importAll(json: string): Promise<RestoreReport> {
       if (typeof rest.at !== 'number' || (await d.practice.where('at').equals(rest.at).count())) { bump(skipped, 'practice'); continue; }
       await d.practice.add({ ...rest, gameId: rest.gameId ? gameIdMap.get(rest.gameId) : undefined }); bump(inserted, 'practice');
     }
-    for (const t of ['latency', 'runs'] as const) {
+    for (const r of (parsed.data.repertoire ?? []) as any[]) {
+      const { id, ...rest } = r; void id;
+      if (typeof rest.key !== 'string' || (await d.repertoire.where('key').equals(rest.key).count())) { bump(skipped, 'repertoire'); continue; }
+      await d.repertoire.add(rest); bump(inserted, 'repertoire');
+    }
+    for (const t of ['latency', 'runs', 'trainingLog'] as const) {
       for (const r of (parsed.data[t] ?? []) as any[]) {
         const { id, ...rest } = r; void id;
         if (typeof rest.at !== 'number' || (await (d as any)[t].where('at').equals(rest.at).count())) { bump(skipped, t); continue; }

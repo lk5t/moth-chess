@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AppContext, type AppCtx, type TabId } from '@/components/AppContext';
 import { useSettings } from '@/settings/useSettings';
 import { useAnalysis, arrowsFromResult } from '@/components/useAnalysis';
 import { useGame } from './useGame';
 import { Board } from '@/components/Board';
-import { EvalBar } from '@/components/charts';
+import { EvalBar, LineChart } from '@/components/charts';
 import { MoveList } from '@/components/MoveList';
 import { Icon, useThemeRoot } from '@/components/ui';
 import { AnalysisPanel } from '@/components/panels/AnalysisPanel';
@@ -16,7 +16,10 @@ import { ReviewPanel } from '@/components/panels/ReviewPanel';
 import { OpeningsPanel } from '@/components/panels/OpeningsPanel';
 import { CoachPanel } from '@/components/panels/CoachPanel';
 import { MemoryPanel } from '@/components/panels/MemoryPanel';
-import { DashboardPanel } from '@/components/panels/DashboardPanel';
+import { DnaPanel } from '@/components/panels/DnaPanel';
+import { EndgamePanel } from '@/components/panels/EndgamePanel';
+import { PracticePanel } from '@/components/panels/PracticePanel';
+import { LabPanel } from '@/components/panels/LabPanel';
 import { LearningPanel } from '@/components/panels/LearningPanel';
 import { HomePanel } from '@/components/panels/HomePanel';
 import { PlayView } from '@/play/PlayView';
@@ -42,15 +45,18 @@ export const SECTIONS: { id: TabId; ws: Workspace; label: string; hint: string; 
   { id: 'analysis', ws: 'analyze', label: 'Evaluate', hint: 'Engine evaluation and the best moves for the position on the board' },
   { id: 'review', ws: 'analyze', label: 'Game review', hint: 'Analyse a whole game: mistakes, accuracy and a report' },
   { id: 'openings', ws: 'analyze', label: 'Openings', hint: 'Opening names, main lines and your repertoire' },
+  { id: 'endgame', ws: 'analyze', label: 'Endgame', hint: 'Endgame type, known results and key technique' },
   { id: 'intelligence', ws: 'analyze', label: 'Explain', hint: 'Plain-language explanation of the position', advanced: true },
   { id: 'threats', ws: 'analyze', label: 'Threats', hint: 'Attacked, hanging and pinned pieces drawn on the board', advanced: true },
   { id: 'neural', ws: 'analyze', label: 'Variation tree', hint: 'Explore and save branching lines (Neural Map)', advanced: true },
   { id: 'whatif', ws: 'analyze', label: 'What-if', hint: 'Compare candidate moves side by side', advanced: true },
   { id: 'coach', ws: 'train', label: 'Coach', hint: 'Exercises from your own mistakes, with spaced repetition' },
+  { id: 'practice', ws: 'train', label: 'Practice', hint: 'Your personal plan: due exercises, endgame drills, opening repertoire' },
   { id: 'play', ws: 'train', label: 'Play MOTH', hint: 'Offline games against MOTH at seven levels' },
   { id: 'memory', ws: 'library', label: 'Games', hint: 'Saved games, positions, folders and tags' },
-  { id: 'dashboard', ws: 'library', label: 'Progress', hint: 'Accuracy, mistakes and training statistics over time' },
+  { id: 'dashboard', ws: 'library', label: 'Player DNA', hint: 'Your openings, accuracy, recurring mistakes and progress' },
   { id: 'engine', ws: 'lab', label: 'MOTH Engine', hint: 'Engine models, learning, latency and benchmarks' },
+  { id: 'lab', ws: 'lab', label: 'Benchmarks', hint: 'MOTH vs Stockfish, test suites, self-play matches' },
 ];
 const sectionOf = (t: TabId) => SECTIONS.find((x) => x.id === t)!;
 const isTab = (t: string | null | undefined): t is TabId => !!t && SECTIONS.some((x) => x.id === t);
@@ -79,7 +85,7 @@ export function BoardApp() {
   const [fenInput, setFenInput] = useState('');
   const [welcome, setWelcome] = useState(params.has('welcome'));
   // no background analysis on screens without a board (Home, Play MOTH, Engine Lab)
-  const analysis = useAnalysis(game.fen, settings, { enabled: settings.enabled && tab !== 'home' && tab !== 'play' && tab !== 'engine' });
+  const analysis = useAnalysis(game.fen, settings, { enabled: settings.enabled && tab !== 'home' && tab !== 'play' && tab !== 'engine' && tab !== 'lab' && tab !== 'practice' });
 
   const toast = useCallback((msg: string) => {
     const id = Date.now() + Math.random();
@@ -92,6 +98,8 @@ export function BoardApp() {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
       if (t.closest('input, textarea, select, [contenteditable]')) return;
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); if (e.shiftKey) game.redo(); else game.undo(); return; }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') { e.preventDefault(); game.redo(); return; }
       if (e.key === 'ArrowLeft') { game.step(-1); e.preventDefault(); }
       else if (e.key === 'ArrowRight') { game.step(1); e.preventDefault(); }
       else if (e.key === 'Home') game.goto(0);
@@ -118,6 +126,23 @@ export function BoardApp() {
   }, [settings.visual.threatVision, tab, game.fen, analysis.result]);
   const layers = useMemo(() => threatLayers(threats, settings.visual.threatLayers), [threats, settings.visual.threatLayers]);
   const arrows = useMemo(() => [...arrowsFromResult(analysis.result, settings), ...layers.arrows], [analysis.result, settings, layers.arrows]);
+  // evaluation graph: the best-line score of every position on the move list that has been analysed
+  const evalCache = useRef(new Map<string, number>());
+  const [evalTick, setEvalTick] = useState(0);
+  useEffect(() => {
+    const r = analysis.result, top = r?.lines[0];
+    if (!r || !top || (r.depth < 8 && !r.complete)) return;
+    const key = r.fen.split(' ').slice(0, 4).join(' ');
+    const pawns = Math.max(-6, Math.min(6, top.whiteScore.type === 'mate' ? (top.whiteScore.value > 0 || top.whiteScore.winner === 'w' ? 6 : -6) : top.whiteScore.value / 100));
+    if (evalCache.current.get(key) !== pawns) { evalCache.current.set(key, pawns); setEvalTick((t) => t + 1); }
+  }, [analysis.result]);
+  const evalSeries = useMemo(() => {
+    const fens = [game.state.rootFen, ...game.state.moves.map((m) => m.fenAfter)];
+    if (fens.length < 3) return null;
+    let last = 0, known = 0;
+    const values = fens.map((f) => { const v = evalCache.current.get(f.split(' ').slice(0, 4).join(' ')); if (v !== undefined) { last = v; known++; } return last; });
+    return known >= 2 ? { values, known } : null;
+  }, [game.state, evalTick]);
   const opening = useMemo(() => recogniseOpening([game.state.rootFen, ...game.state.moves.slice(0, game.state.cursor).map((m) => m.fenAfter)]).opening, [game.state]);
 
   const ctx: AppCtx = {
@@ -141,7 +166,9 @@ export function BoardApp() {
       case 'openings': return <OpeningsPanel />;
       case 'coach': return <CoachPanel />;
       case 'memory': return <MemoryPanel />;
-      case 'dashboard': return <DashboardPanel />;
+      case 'dashboard': return <DnaPanel />;
+      case 'endgame': return <EndgamePanel />;
+      case 'practice': return <PracticePanel />;
       case 'play': return null;
       case 'home': return null;
     }
@@ -168,12 +195,20 @@ export function BoardApp() {
               <button className="btn icon" onClick={() => game.step(1)} aria-label="Next move" title="Forward (→)">›</button>
               <button className="btn icon" onClick={() => game.goto(Infinity)} aria-label="Last move" title="End">»</button>
               <button className="btn icon" onClick={() => setOrientation((o) => (o === 'white' ? 'black' : 'white'))} aria-label="Flip board" title="Flip (F)">{Icon.flip}</button>
+              <button className="btn icon" onClick={game.undo} disabled={!game.canUndo} aria-label="Undo" title="Undo (Ctrl+Z)">↶</button>
+              <button className="btn icon" onClick={game.redo} disabled={!game.canRedo} aria-label="Redo" title="Redo (Ctrl+Y)">↷</button>
               <button className="btn" onClick={() => { game.reset(); }} title="Start a new game from the initial position">New</button>
               <span className="grow" />
               {opening && <span className="small muted" title={opening.moves}>{opening.eco} · {opening.name}</span>}
               {st.over && <span className={`badge ${st.checkmate ? 'bad' : 'neutral'}`}>{st.checkmate ? 'Checkmate' : `Draw · ${st.reason?.replace(/-/g, ' ')}`}</span>}
               {!st.over && st.check && <span className="badge warn">Check</span>}
             </div>
+            {evalSeries && (
+              <div className="card" style={{ padding: '8px 10px' }} data-testid="eval-graph">
+                <div className="row small muted" style={{ marginBottom: 4 }}><span className="grow">Evaluation by move</span><span>{evalSeries.known}/{evalSeries.values.length} positions analysed</span></div>
+                <LineChart values={evalSeries.values} min={-6} max={6} mid={0} height={56} current={game.state.cursor} onPick={game.goto} label="Evaluation after each move (pawns, White's view)" area />
+              </div>
+            )}
             <div className="card" style={{ padding: 10 }}>
               <MoveList moves={game.state.moves} cursor={game.state.cursor} onGoto={game.goto} startFen={game.state.rootFen} />
             </div>
@@ -236,7 +271,7 @@ export function BoardApp() {
             </div>
           )}
           <div key={tab} className="fade-in">
-            {tab === 'home' ? <HomePanel /> : tab === 'play' ? <PlayView /> : tab === 'engine' ? <LearningPanel /> : (
+            {tab === 'home' ? <HomePanel /> : tab === 'play' ? <PlayView /> : tab === 'engine' ? <LearningPanel /> : tab === 'lab' ? <LabPanel /> : (
               <main className="main">
                 {boardColumn}
                 <div className="stack" style={{ minWidth: 0 }}>{panel}</div>

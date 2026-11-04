@@ -15,7 +15,22 @@ const alias = { '@': resolve(root, 'src') };
 
 if (!existsSync(resolve(root, 'public/engines/stockfish.js')) || !existsSync(resolve(root, 'public/engines/stockfish.wasm'))) {
   console.log('[build] engine not in public/engines yet, running copy-engine…');
-  execFileSync(process.execPath, [resolve(root, 'scripts/copy-engine.mjs')], { stdio: 'inherit' });
+  await build({
+  configFile: false,
+  logLevel: 'warn',
+  resolve: { alias },
+  publicDir: false,
+  define: { 'process.env.NODE_ENV': '"production"' },
+  build: {
+    outDir: resolve(root, 'dist'),
+    emptyOutDir: false,
+    target: 'chrome110',
+    lib: { entry: resolve(root, 'src/moth-engine/lab-worker.ts'), formats: ['iife'], name: 'MothLabWorker', fileName: () => 'moth-lab-worker.js' },
+    rollupOptions: { output: { inlineDynamicImports: true } },
+  },
+});
+
+execFileSync(process.execPath, [resolve(root, 'scripts/copy-engine.mjs')], { stdio: 'inherit' });
 }
 
 console.log('[build] pass 1/4: extension pages');
