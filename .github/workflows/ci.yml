@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install
+        id: install
+        run: |
+          mkdir -p ci-logs
+          (npm install --no-audit --no-fund 2>&1; echo "exit=$?") | tee ci-logs/install.log
+          tail -1 ci-logs/install.log | grep -q 'exit=0'
+
+      - name: Typecheck
+        id: typecheck
+        if: always() && steps.install.outcome == 'success'
+        run: |
+          set -o pipefail
+          npx tsc --noEmit -p tsconfig.json 2>&1 | tee ci-logs/typecheck.log
+
+      - name: Unit tests (Vitest)
+        id: unit
+        if: always() && steps.install.outcome == 'success'
+        run: |
+          set -o pipefail
+          npx vitest run --reporter=verbose 2>&1 | tee ci-logs/unit.log
+
+      - name: Build
+        id: build
+        if: always() && steps.install.outcome == 'success'
+        run: |
+          set -o pipefail
+          npm run build 2>&1 | tee ci-logs/build.log
+
+      - name: Browser tests (Playwright, Chromium)
+        id: e2e
+        if: always() && steps.build.outcome == 'success'
+        run: |
+          set -o pipefail
+          npx playwright install --with-deps chromium 2>&1 | tail -5
+          npx playwright test 2>&1 | tee ci-logs/e2e.log
+
+      - name: Publish logs and build to ci-output branch
+        if: always()
+        run: |
+          {
+            echo "commit=${GITHUB_SHA}"
+            echo "install=${{ steps.install.outcome }}"
+            echo "typecheck=${{ steps.typecheck.outcome }}"
+            echo "unit=${{ steps.unit.outcome }}"
+            echo "build=${{ steps.build.outcome }}"
+            echo "e2e=${{ steps.e2e.outcome }}"
+          } > ci-logs/summary.txt
+          out=$(mktemp -d)
+          cp -r ci-logs "$out/"
+          [ -f package-lock.json ] && cp package-lock.json "$out/"
+          [ -d dist ] && cp -r dist "$out/dist"
+          [ -d test-results ] && cp -r test-results "$out/test-results"
+          cd "$out"
+          git init -q -b ci-output
+          git config user.name "moth-ci"
+          git config user.email "moth-ci@users.noreply.github.com"
+          git add -A
+          git commit -qm "CI output for ${GITHUB_SHA}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" ci-output
+
+      - name: Upload dist artifact
+        if: steps.build.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: moth-chess-dist
+          path: dist

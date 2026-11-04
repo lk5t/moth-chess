@@ -1,0 +1,37 @@
+{
+  "name": "moth-chess",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MOTH Chess — local, fair-play-compliant chess analysis extension for Brave/Chromium (Manifest V3, Stockfish WASM).",
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "scripts": {
+    "postinstall": "node scripts/copy-engine.mjs",
+    "icons": "node scripts/make-icons.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "npm run typecheck && vitest run",
+    "test:unit": "vitest run",
+    "test:e2e": "npm run build && playwright test",
+    "build": "node scripts/build.mjs",
+    "verify": "node scripts/verify-dist.mjs"
+  },
+  "dependencies": {
+    "chess.js": "^1.4.0",
+    "dexie": "^4.0.11",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "stockfish": "^17.1.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "@types/chrome": "^0.0.287",
+    "@types/node": "^22.10.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "fake-indexeddb": "^6.0.0",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.3",
+    "vitest": "^2.1.8"
+  }
+}
