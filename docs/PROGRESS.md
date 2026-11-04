@@ -240,16 +240,77 @@ These connections are in place:
 - The 2.0 bug where practice, runs and latency were exported but never re-imported is fixed.
 - Restore merges records and never deletes.
 
-## Phase 22: Testing (see CI)
+## Phase 22: Testing (done; all ran in CI, commit 9daa2f7)
 
-Unit and e2e results are recorded in the release notes and the final report.
+- **Unit (Vitest):** 216 pass. They cover:
+  - move legality and perft
+  - the engine controller, recovery and caching
+  - opening recognition
+  - endgame and KPK
+  - the coach and Player DNA
+  - training generation
+  - PGN/FEN parsing
+  - Library storage and Dexie v1→v4 migrations
+  - backup and restore
+  - fair-play contexts
+  - settings migration and profiles
+  - update checks
+  - reports
+- **Browser (Playwright, Chromium):** 35 pass. They cover:
+  - the extension boots
+  - workspace navigation in Simple and Full mode
+  - analysis and mate-in-one
+  - settings persistence
+  - fair-play verdicts
+  - the HUD on stand-in Lichess pages (arrows, resize, orientation, clock teardown, finished-game unlock)
+  - Play MOTH
+  - the import → review → coach → DNA workflow
+  - What-If isolation
+  - missing engine or model files
+  - corrupted settings
+  - performance
+- **Engine:** perft correct on all reference positions.
+- **Not run:** the live Lichess and Chess.com sites. The tests use stand-in pages, and the real sites cannot be logged into from CI.
 
-## Phase 23: Brave (done in CI)
+### Performance (CI browser)
 
-The Brave job:
+| Metric | Result |
+|---|---|
+| Home visible | 450 ms |
+| MOTH first line on a middlegame position | 599 ms |
+| MOTH depth 10 | 1.6 s |
+| Stockfish first line | 1.1 s |
+| Cached revisit | 273 ms |
+| JS heap | 4.2 MB at start → 6.4 MB after 20 workspace switches → 5.6 MB after 5 reloads |
+| Idle shutdown | 10.5 s with a 10 s setting |
 
-1. Installs the real Brave browser from Brave's apt repository.
-2. Loads the unpacked build.
-3. Runs the extension, overlay, missing-assets and play suites.
+Before 3.0 the engine started on the Home-equivalent screen; it no longer does.
 
-## Phase 24: Final review (see the release notes)
+### Bug found by the new tests
+
+A synchronous cache-hit callback in the analysis hook threw `Cannot access 'h' before initialization` whenever an already-analysed position was revisited. It had been present since 2.0 and is now fixed.
+
+## Phase 23: Brave release verification (done)
+
+- CI installs **Brave 156.1.98.63** from Brave's official apt repository.
+- It loads `dist/` unpacked through Playwright (`MOTH_BROWSER`) and runs 22 tests. All pass.
+- The tests check:
+  - MV3 manifest and permissions (no static host permissions)
+  - the service worker and dynamic content scripts
+  - popup and board navigation
+  - WASM engines
+  - permitted Lichess contexts and live-game restrictions
+  - offline Play MOTH
+  - missing assets
+- `verify-dist` checks the manifest, the CSP, every worker and asset, and the fair-play origins.
+- **Not covered in CI:** a manual install in a desktop Brave profile, an extension reload across a real browser restart, and chess.com pages (stand-in tests cover Lichess markup).
+
+## Phase 24: Final review (done)
+
+- The version is 3.0.0 in `package.json` and the manifest.
+- The release notes are in `.github/release-notes/v3.0.0.md`, and the changelog is in `CHANGELOG.md`.
+- The release zip contains only `moth-chess-dist`, the README, the changelog, `docs/` and the `fair-play/` rules source.
+- Open items:
+  - The engine time-control gain is not statistically significant.
+  - No new network was trained.
+  - Site adapters have not been checked against the live sites.
