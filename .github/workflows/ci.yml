@@ -92,16 +92,27 @@ jobs:
           [ -f package-lock.json ] && cp package-lock.json "$out/"
           [ -d dist ] && cp -r dist "$out/dist"
           [ -d test-results ] && cp -r test-results "$out/test-results"
+          [ -d test-results-brave ] && cp -r test-results-brave "$out/test-results-brave"
           cd "$out"
           git init -q -b ci-output
           git config user.name "moth-ci"
           git config user.email "moth-ci@users.noreply.github.com"
           git add -A
           git commit -qm "CI output for ${GITHUB_SHA}"
-          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" ci-output
+          for i in 1 2 3 4 5; do git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" ci-output && break; sleep 10; done
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            test-results
+            test-results-brave
+            ci-logs
 
       - name: Upload dist artifact
-        if: steps.build.outcome == 'success'
+        if: always() && steps.build.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: moth-chess-dist

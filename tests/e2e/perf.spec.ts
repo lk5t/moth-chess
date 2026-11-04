@@ -1,6 +1,6 @@
 // Phase 22 performance and stability measurements (real numbers written to test-results/perf.json).
 // Assertions are generous ceilings for slow CI runners; the measured values are the point.
-import { test, expect } from './fixtures';
+import { test, expect, patchSettings } from './fixtures';
 import { writeFileSync, mkdirSync } from 'node:fs';
 
 const results: Record<string, unknown> = {};
@@ -28,11 +28,7 @@ test('startup and first analysis result for both engines', async ({ context, ext
 });
 
 test('revisiting a position is answered from the cache; switching positions cancels the old search', async ({ context, ext, sw }) => {
-  await sw.evaluate(async () => {
-    const k = 'moth.settings.v1';
-    const cur = (await chrome.storage.local.get(k))[k] ?? {};
-    await chrome.storage.local.set({ [k]: { ...cur, engine: { ...(cur.engine ?? {}), depth: 10 } } });
-  });
+  await patchSettings(sw, { engine: { depth: 10 } });
   const page = await context.newPage();
   await page.goto(ext('board.html?tab=analysis'));
   await page.getByText('Load a FEN or PGN').click();
@@ -76,11 +72,7 @@ test('memory stays bounded over repeated navigation and reloads', async ({ conte
 });
 
 test('idle engine workers are shut down; Home starts no engine', async ({ context, ext, sw }) => {
-  await sw.evaluate(async () => {
-    const k = 'moth.settings.v1';
-    const cur = (await chrome.storage.local.get(k))[k] ?? {};
-    await chrome.storage.local.set({ [k]: { ...cur, performance: { ...(cur.performance ?? {}), idleSec: 10, profile: 'custom' } } });
-  });
+  await patchSettings(sw, { performance: { idleSec: 10, profile: 'custom' } });
   const page = await context.newPage();
   await page.goto(ext('board.html?tab=analysis'));
   await expect(page.locator('.line').first()).toBeVisible({ timeout: 30_000 });

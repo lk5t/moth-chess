@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures';
+import { test, expect, patchSettings } from './fixtures';
 
 // A mate-in-one for White: Qh5xf7#  (Scholar's mate pattern)
 const MATE_IN_1 = 'r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4';
@@ -49,7 +49,9 @@ test('playing a move on the board updates the position and the move list', async
   await expect(page.getByRole('button', { name: 'Move Qxf7#' })).toBeVisible();
 });
 
-test('Workspace 3.0: every workspace and section opens; advanced tools sit behind "More tools" in Simple mode', async ({ context, ext }) => {
+test('Workspace 3.0: every workspace and section opens; advanced tools sit behind "More tools" in Simple mode', async ({ context, ext, sw }) => {
+  test.setTimeout(180_000);
+  await patchSettings(sw, { engine: { depth: 8 } }); // keep the CPU free for the UI walk
   const page = await context.newPage();
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));

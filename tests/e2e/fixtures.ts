@@ -29,3 +29,15 @@ export const test = base.extend<{ context: BrowserContext; sw: Worker; extId: st
 });
 
 export const expect = test.expect;
+
+/** Merge a settings patch into stored settings, after the install-time migration has written them. */
+export async function patchSettings(sw: Worker, patch: Record<string, Record<string, unknown>>) {
+  await expect.poll(() => sw.evaluate(async () => !!(await chrome.storage.local.get('moth.settings.v1'))['moth.settings.v1']), { timeout: 10_000 }).toBe(true);
+  await sw.evaluate(async (p) => {
+    const k = 'moth.settings.v1';
+    const cur = (await chrome.storage.local.get(k))[k] ?? {};
+    const next: Record<string, unknown> = { ...cur };
+    for (const [sec, v] of Object.entries(p)) next[sec] = { ...(cur[sec] ?? {}), ...v };
+    await chrome.storage.local.set({ [k]: next });
+  }, patch);
+}

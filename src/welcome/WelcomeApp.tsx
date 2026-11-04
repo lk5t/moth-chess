@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useSettings } from '@/settings/useSettings';
 import { useThemeRoot, BetaBadge, Icon } from '@/components/ui';
 import { ProfilePicker, SitesList, FairPlayNote, appVersion, openExt } from '@/components/shared';
+import { DISCLAIMER } from '@/content/detector/sites';
 
 const STEPS = ['Welcome', 'Engine', 'Performance', 'Websites', 'Fair play'] as const;
 
@@ -61,7 +62,13 @@ export function WelcomeApp() {
           )}
           {step === 2 && (
             <>
-              <h2 style={{ margin: 0 }}>Pick a performance profile</h2>
+              <h2 style={{ margin: 0 }}>How much do you want to see?</h2>
+              <div className="seg" role="group" aria-label="Interface mode">
+                <button aria-pressed={s.ui.mode === 'simple'} onClick={() => update({ ui: { mode: 'simple' } })}>Simple</button>
+                <button aria-pressed={s.ui.mode === 'full'} onClick={() => update({ ui: { mode: 'full' } })}>Full</button>
+              </div>
+              <div className="small muted">{s.ui.mode === 'simple' ? 'Simple: the essentials. Advanced tools stay under “More tools”, and Engine Lab is hidden.' : 'Full: every tool, including Engine Lab.'}</div>
+              <h2 style={{ margin: '10px 0 0' }}>Pick a performance profile</h2>
               <ProfilePicker settings={s} update={update} />
               <div className="small muted">Laptop on battery? Choose Eco. Desktop with power to spare? Performance.</div>
             </>
@@ -76,6 +83,7 @@ export function WelcomeApp() {
           {step === 4 && (
             <>
               <h2 style={{ margin: 0 }}>Fair play comes first</h2>
+              <p style={{ margin: 0 }}>{DISCLAIMER}</p>
               <FairPlayNote />
               <ul className="small" style={{ margin: 0, paddingLeft: 18 }}>
                 <li>Using engine help in live or rated games breaks the rules of every chess site. MOTH is built to make that impossible, not just discouraged.</li>
