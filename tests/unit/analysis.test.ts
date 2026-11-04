@@ -9,11 +9,12 @@ import { START_FEN } from '@/chess/position';
 import type { EngineResult } from '@/types';
 import { toWhite } from '@/engine/normalize';
 
-function fakeResult(fen: string, lines: { uci: string[]; cp: number }[], depth = 20): EngineResult {
+function fakeResult(fen: string, lines: { uci: string[]; cp?: number; mate?: number }[], depth = 20): EngineResult {
   const turn = fen.split(' ')[1] as 'w' | 'b';
+  const sc = (l: { cp?: number; mate?: number }) => (l.mate !== undefined ? { type: 'mate' as const, value: l.mate } : { type: 'cp' as const, value: l.cp ?? 0 });
   return {
     fen, searchId: 1, depth, complete: true, bestMove: lines[0]?.uci[0],
-    lines: lines.map((l, i) => ({ multipv: i + 1, depth, score: { type: 'cp', value: l.cp }, whiteScore: toWhite({ type: 'cp', value: l.cp }, turn), pv: l.uci, pvSan: [] })),
+    lines: lines.map((l, i) => ({ multipv: i + 1, depth, score: sc(l), whiteScore: toWhite(sc(l), turn), pv: l.uci, pvSan: [] })),
   };
 }
 
@@ -122,5 +123,13 @@ describe('MOTH Intelligence', () => {
   it('has a pluggable provider registry with an always-available heuristic provider', async () => {
     expect(listProviders()[0].id).toBe('heuristic');
     expect(await heuristicProvider.available()).toBe(true);
+  });
+  it('compares candidates against a forced mate without centipawn nonsense', () => {
+    const fen = 'r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4';
+    const rep = explainPosition(fen, fakeResult(fen, [{ uci: ['h5f7'], mate: 1 }, { uci: ['h5h4'], cp: -107 }]), { detail: 'detailed' });
+    expect(rep.candidates[0].san).toBe('Qxf7#');
+    const cmp = rep.candidates[1].reasons.find((r) => r.source === 'engine');
+    expect(cmp?.text).toBe('Misses the forced mate in 1 that Qxf7# delivers (depth 20).');
+    expect(rep.candidates[1].reasons.some((r) => /pawns worse/.test(r.text))).toBe(false);
   });
 });

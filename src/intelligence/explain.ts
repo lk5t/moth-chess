@@ -167,7 +167,7 @@ export function explainPosition(fenIn: string, engine?: EngineResult | null, opt
       const reasons = moveReasons(fen, l, features, threats);
       if (i > 0) {
         reasons.push({
-          text: delta <= 15 ? `Practically equal to ${topSan} according to the engine.` : `The engine rates it ${(delta / 100).toFixed(2)} pawns worse than ${topSan} (depth ${l.depth}).`,
+          text: mateComparison(top, l, topSan) ?? (delta <= 15 ? `Practically equal to ${topSan} according to the engine.` : `The engine rates it ${(delta / 100).toFixed(2)} pawns worse than ${topSan} (depth ${l.depth}).`),
           source: 'engine', category: 'comparison', weight: 2,
         });
       } else if (l.pvSan.length > 1) {
@@ -233,3 +233,15 @@ export function squaresOf(insights: Insight[]): Square[] {
   return insights.flatMap((i) => (i.text.match(/\b[a-h][1-8]\b/g) ?? []) as Square[]);
 }
 
+
+/** Engine comparison when mate scores are involved: centipawn deltas against a mate are meaningless. */
+function mateComparison(top: EngineLine, l: EngineLine, topSan: string): string | null {
+  const t = top.score, x = l.score;
+  if (t.type !== 'mate' && x.type !== 'mate') return null;
+  if (t.type === 'mate' && t.value > 0) {
+    if (x.type === 'mate' && x.value > 0) return x.value === t.value ? `Also mates in ${x.value}, like ${topSan}.` : `Still mates, but in ${x.value} instead of ${t.value} with ${topSan}.`;
+    return `Misses the forced mate in ${t.value} that ${topSan} delivers (depth ${l.depth}).`;
+  }
+  if (x.type === 'mate' && x.value < 0) return `Allows a forced mate in ${-x.value}; ${topSan} avoids it (depth ${l.depth}).`;
+  return null;
+}
