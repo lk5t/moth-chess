@@ -153,7 +153,7 @@ export function CoachPanel({ compact }: { compact?: boolean }) {
           {!compact && (
             <div className="grid-2">
               <Card title="Mistakes by phase">
-                {report.byPhase.map((p) => <div key={p.phase} className="row small"><span className="grow">{p.phase}</span><span className="mono">{p.count}</span><span className="muted">avg −{p.avgLoss.toFixed(0)}%</span></div>)}
+                {report.byPhase.map((p) => <div key={p.phase} className="row small"><span className="grow">{p.phase}</span><span className="mono">{p.count}</span><span className="muted">{p.count ? `avg −${p.avgLoss.toFixed(0)}%` : "—"}</span></div>)}
               </Card>
               <Card title="Missed motifs">
                 {!report.byMotif.length && <Empty>Review games to see motifs.</Empty>}
