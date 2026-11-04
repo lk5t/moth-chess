@@ -51,7 +51,7 @@ test('import → review → coach exercise → dashboard, all local and persiste
   await page.getByRole('button', { name: /Review game/ }).click();
   await expect(page.getByText('Review complete')).toBeVisible({ timeout: 120_000 });
   await expect(page.getByRole('button', { name: 'Export annotated PGN' })).toBeVisible();
-  await expect(page.getByText(/blunder/i).first()).toBeVisible();
+  await expect(page.getByText(/Turning point: 3\.\.\.Nf6 \(blunder\)/)).toBeVisible();
   await page.screenshot({ path: 'test-results/workflow-review.png' });
 
   // coach: an exercise was generated from the user's own blunder
