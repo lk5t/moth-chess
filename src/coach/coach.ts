@@ -62,7 +62,7 @@ const MOTIF_TEXT: Record<TacticalMotif, string> = {
 export function explainExercise(m: ReviewedMove, motifs: TacticalMotif[]): string {
   const idea = motifs.map((x) => MOTIF_TEXT[x]).join(', ');
   const lost = (m.winBefore - m.winAfter).toFixed(0);
-  return `In the game ${m.san} was played (${m.classification}); ${m.bestMoveSan ?? 'the engine move'} was stronger. The key idea is ${idea}. Your winning chances dropped by about ${lost} percentage points.`;
+  return `In the game ${m.san} was played (${m.classification}); ${m.bestMoveSan ?? 'the engine move'} was stronger. The key idea is ${idea}. The game move ${m.san} cost about ${lost} percentage points of winning chances.`;
 }
 
 /** Build exercises from a completed review — only the user's own mistakes/blunders when their colour is known. */
