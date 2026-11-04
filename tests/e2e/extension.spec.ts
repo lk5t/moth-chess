@@ -19,7 +19,7 @@ test('popup renders with enable switch and board launcher', async ({ context, ex
   await expect(page.getByRole('button', { name: 'Open analysis board' })).toBeVisible();
 });
 
-test('built-in board runs the bundled Stockfish locally and finds mate in one', async ({ context, ext }) => {
+test('built-in board runs the bundled engine (MOTH by default) locally and finds mate in one', async ({ context, ext }) => {
   const external: string[] = [];
   context.on('request', (r) => { if (!r.url().startsWith('chrome-extension://') && !r.url().startsWith('data:') && !r.url().startsWith('blob:')) external.push(r.url()); });
   const page = await context.newPage();

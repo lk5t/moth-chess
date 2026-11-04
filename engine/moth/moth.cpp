@@ -133,6 +133,9 @@ static const int NN_IN = 768;
 static const int NN_MAXH = 128;
 static int nn_h = 0;           // 0 = no network loaded (pure classical evaluation)
 static float nn_scale = 100.f; // network output units → centipawns
+// The network is a bounded residual on top of the classical evaluation: it refines positional judgement
+// but can never override material by more than NN_CLAMP centipawns (keeps search robust off-distribution).
+static const int NN_CLAMP = 250;
 static float NN_W1[NN_IN * NN_MAXH];
 static float NN_B1[NN_MAXH];
 static float NN_W2[2 * NN_MAXH];
@@ -458,7 +461,7 @@ static int move_uci(Move m, char* o) {
   int f = m_from(m), t = m_to(m), len = 0;
   o[len++] = (char)('a' + file_of(f)); o[len++] = (char)('1' + rank_of(f));
   o[len++] = (char)('a' + file_of(t)); o[len++] = (char)('1' + rank_of(t));
-  if (m_promo(m)) o[len++] = "  nbrq"[m_promo(m)];
+  if (m_promo(m)) o[len++] = " nbrq"[m_promo(m)];
   o[len] = 0;
   return len;
 }
@@ -499,7 +502,7 @@ static int move_san(Move m, char* o) {
     } else if (cap) o[len++] = (char)('a' + file_of(from));
     if (cap) o[len++] = 'x';
     o[len++] = (char)('a' + file_of(to)); o[len++] = (char)('1' + rank_of(to));
-    if (m_promo(m)) { o[len++] = '='; o[len++] = "  NBRQ"[m_promo(m)]; }
+    if (m_promo(m)) { o[len++] = '='; o[len++] = " NBRQ"[m_promo(m)]; }
   }
   make_move(m);
   if (in_check()) { MoveList l; o[len++] = gen_legal(l) ? '+' : '#'; }
@@ -657,7 +660,7 @@ static int eval_nnue() {
     s += x * NN_W2[i] + y * NN_W2[nn_h + i];
   }
   int cp = (int)(s * nn_scale);
-  return imax(-600, imin(600, cp));
+  return imax(-NN_CLAMP, imin(NN_CLAMP, cp));
 }
 
 static bool insufficient_material() {
@@ -1089,6 +1092,20 @@ EXPORT(mc_san_to_uci) int mc_san_to_uci() {
     if (eq) return move_uci(l.m[i], IO);
   }
   return 0;
+}
+/**
+ * Quiet position (training filter): not in check and no legal capture/promotion that wins material by
+ * static exchange. Evaluation targets from a search are only comparable to a static evaluation there.
+ */
+EXPORT(mc_quiet) int mc_quiet() {
+  if (in_check()) return 0;
+  MoveList l; gen_pseudo(l, true);
+  for (int i = 0; i < l.n; i++) {
+    Move m = l.m[i];
+    if (!(m_promo(m) || see(m) > 0)) continue;
+    if (make_legal(m)) { unmake_move(); return 0; }
+  }
+  return 1;
 }
 EXPORT(mc_side) int mc_side() { return P.side; }
 EXPORT(mc_in_check) int mc_in_check() { return in_check() ? 1 : 0; }

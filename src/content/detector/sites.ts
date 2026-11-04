@@ -15,7 +15,7 @@ export interface SiteDef {
 }
 
 export const SITES: SiteDef[] = [
-  { id: 'lichess', label: 'Lichess analysis board & practice', origin: 'https://lichess.org/*', matches: ['https://lichess.org/analysis*', 'https://lichess.org/practice/*'] },
+  { id: 'lichess', label: 'Lichess analysis board, studies & practice', origin: 'https://lichess.org/*', matches: ['https://lichess.org/analysis*', 'https://lichess.org/practice/*', 'https://lichess.org/study/*'] },
   { id: 'chesscom', label: 'Chess.com analysis board', origin: 'https://www.chess.com/*', matches: ['https://www.chess.com/analysis*'] },
 ];
 
@@ -27,7 +27,7 @@ export interface PageProbe {
 }
 
 export type PageVerdict =
-  | { status: 'supported'; site: SiteId; context: 'analysis' | 'practice' }
+  | { status: 'supported'; site: SiteId; context: 'analysis' | 'practice' | 'study' }
   | { status: 'blocked'; site: SiteId; reason: string }
   | { status: 'unsupported'; reason: string };
 
@@ -53,8 +53,10 @@ export function classifyPage(p: PageProbe): PageVerdict {
     // exactly like a game ID).
     if (/^\/analysis(\/|$)/.test(path)) return { status: 'supported', site: 'lichess', context: 'analysis' };
     if (/^\/practice\//.test(path)) return { status: 'supported', site: 'lichess', context: 'practice' };
+    // studies are analysis documents (not games); the clock check above still applies
+    if (/^\/study\/(?!broadcast)[A-Za-z0-9]{8}(\/[A-Za-z0-9]{8})?\/?$/.test(path)) return { status: 'supported', site: 'lichess', context: 'study' };
     for (const [re, reason] of LICHESS_BLOCKED_PATHS) if (re.test(path)) return { status: 'blocked', site: 'lichess', reason };
-    return { status: 'unsupported', reason: 'Only the Lichess analysis board and Practice are supported' };
+    return { status: 'unsupported', reason: 'Only the Lichess analysis board, studies and Practice are supported' };
   }
   if (host === 'chess.com') {
     for (const [re, reason] of CHESSCOM_BLOCKED_PATHS) if (re.test(path)) return { status: 'blocked', site: 'chesscom', reason };

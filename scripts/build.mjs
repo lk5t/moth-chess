@@ -2,6 +2,7 @@
 //   Pass 1: extension pages (vite.config.ts)          -> dist/*.html + dist/assets
 //   Pass 2: content script as a single classic IIFE   -> dist/content.js
 //   Pass 3: background service worker (single ES file) -> dist/background.js
+//   Pass 4: MOTH Engine workers (classic scripts)       -> dist/moth-worker.js, dist/moth-train-worker.js (assets: public/moth-engine/)
 // Then verifies the output (manifest, engine assets, entry files).
 import { build } from 'vite';
 import { resolve, dirname } from 'node:path';
@@ -17,10 +18,10 @@ if (!existsSync(resolve(root, 'public/engines/stockfish.js')) || !existsSync(res
   execFileSync(process.execPath, [resolve(root, 'scripts/copy-engine.mjs')], { stdio: 'inherit' });
 }
 
-console.log('[build] pass 1/3: extension pages');
+console.log('[build] pass 1/4: extension pages');
 await build({ configFile: resolve(root, 'vite.config.ts'), logLevel: 'warn' });
 
-console.log('[build] pass 2/3: content script');
+console.log('[build] pass 2/4: content script');
 await build({
   configFile: false,
   logLevel: 'warn',
@@ -36,7 +37,7 @@ await build({
   },
 });
 
-console.log('[build] pass 3/3: background service worker');
+console.log('[build] pass 3/4: background service worker');
 await build({
   configFile: false,
   logLevel: 'warn',
@@ -48,6 +49,37 @@ await build({
     emptyOutDir: false,
     target: 'chrome110',
     lib: { entry: resolve(root, 'src/background/index.ts'), formats: ['es'], fileName: () => 'background.js' },
+    rollupOptions: { output: { inlineDynamicImports: true } },
+  },
+});
+
+console.log('[build] pass 4/4: MOTH Engine worker');
+await build({
+  configFile: false,
+  logLevel: 'warn',
+  resolve: { alias },
+  publicDir: false,
+  define: { 'process.env.NODE_ENV': '"production"' },
+  build: {
+    outDir: resolve(root, 'dist'),
+    emptyOutDir: false,
+    target: 'chrome110',
+    lib: { entry: resolve(root, 'src/moth-engine/worker.ts'), formats: ['iife'], name: 'MothEngineWorker', fileName: () => 'moth-worker.js' },
+    rollupOptions: { output: { inlineDynamicImports: true } },
+  },
+});
+
+await build({
+  configFile: false,
+  logLevel: 'warn',
+  resolve: { alias },
+  publicDir: false,
+  define: { 'process.env.NODE_ENV': '"production"' },
+  build: {
+    outDir: resolve(root, 'dist'),
+    emptyOutDir: false,
+    target: 'chrome110',
+    lib: { entry: resolve(root, 'src/moth-engine/train-worker.ts'), formats: ['iife'], name: 'MothTrainWorker', fileName: () => 'moth-train-worker.js' },
     rollupOptions: { output: { inlineDynamicImports: true } },
   },
 });

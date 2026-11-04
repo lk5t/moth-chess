@@ -8,6 +8,33 @@ import { parsePgn, positionKey } from '@/chess/position';
 
 export type StoredGame = SavedGame & { posHashes?: string[] };
 
+/** A finished game against MOTH plus the per-move analysis used for personal adaptation. */
+export interface PracticeGame {
+  id?: number;
+  gameId?: number; // id in `games` when saved to Memory
+  at: number;
+  userColor: 'w' | 'b';
+  style: 'aggressive' | 'balanced' | 'defensive';
+  level: number;
+  timeControl: string;
+  result: '1-0' | '0-1' | '1/2-1/2';
+  reason: string;
+  uci: string[];
+  openingKey: string; // first moves (up to 8 plies) in UCI
+  openingName?: string;
+  eco?: string;
+  /** user moves classified by MOTH's evaluation drop */
+  userMoves: { ply: number; uci: string; before: number; after: number; best?: string; tags: string[] }[];
+}
+
+/** Engine models trained inside the extension (Learning Lab). */
+export interface StoredModel { id?: number; modelId: string; meta: import('@/moth-engine/model').ModelMeta; bytes: ArrayBuffer; createdAt: number }
+
+/** Measured engine move latencies (move requests, not analysis). */
+export interface LatencySample { id?: number; at: number; ms: number; source: 'book' | 'cache' | 'search' | 'ponder'; engine: string; context: 'play' | 'board' | 'bench' }
+
+export interface TrainingRun { id?: number; at: number; status: 'running' | 'done' | 'failed' | 'cancelled'; log: string[]; candidateId?: string; promoted?: boolean; params: Record<string, unknown> }
+
 export class MothDB extends Dexie {
   games!: Table<StoredGame, number>;
   reviews!: Table<GameReview, number>;
@@ -20,6 +47,10 @@ export class MothDB extends Dexie {
   annotations!: Table<Annotation, number>;
   folders!: Table<Folder, number>;
   simulations!: Table<Simulation, number>;
+  practice!: Table<PracticeGame, number>;
+  models!: Table<StoredModel, number>;
+  latency!: Table<LatencySample, number>;
+  runs!: Table<TrainingRun, number>;
 
   constructor(name = 'moth-chess') {
     super(name);
@@ -59,6 +90,13 @@ export class MothDB extends Dexie {
           if (!Array.isArray(p.tags)) p.tags = [];
         });
       });
+    // v3 — MOTH Engine: practice games (personal adaptation), trained models, latency samples, training runs
+    this.version(3).stores({
+      practice: '++id, at, userColor, openingKey, result, gameId',
+      models: '++id, &modelId, createdAt',
+      latency: '++id, at, source, context',
+      runs: '++id, at, status',
+    });
   }
 }
 
@@ -82,5 +120,5 @@ export function db(): MothDB {
 /** Tests use isolated databases. */
 export function setDb(d: MothDB | null) { instance = d; }
 
-export const TABLES = ['games', 'reviews', 'positions', 'openings', 'sessions', 'trees', 'exercises', 'attempts', 'annotations', 'folders', 'simulations'] as const;
+export const TABLES = ['games', 'reviews', 'positions', 'openings', 'sessions', 'trees', 'exercises', 'attempts', 'annotations', 'folders', 'simulations', 'practice', 'models', 'latency', 'runs'] as const;
 export type TableName = (typeof TABLES)[number];

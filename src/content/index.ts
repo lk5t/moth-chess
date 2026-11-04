@@ -4,7 +4,7 @@
 // It never makes moves, never interacts with the site's game logic, and does not hide itself.
 import { classifyPage, type PageVerdict, type SiteId } from './detector/sites';
 import { ADAPTERS, type BoardReading } from './adapters/adapters';
-import { arrowPath, squareOrigin } from './arrows/geometry';
+import { arrowPath, squareCenter, squareOrigin } from './arrows/geometry';
 import { clampToViewport, defaultOverlayState, dragTo, resizeTo, BAR_H, MINI_W, type OverlayState } from './overlay/layout';
 import { PORT_CONTENT, type Highlight } from '@/utils/messages';
 import type { Arrow } from '@/types';
@@ -35,6 +35,7 @@ function start(site: SiteId, initialSettings: Settings) {
   let lastSent = '';
   let arrows: Arrow[] = [];
   let highlights: Highlight[] = [];
+  let evalBar: { white: number; label: string } | null = null;
   let boardEl: HTMLElement | null = null;
 
   // ---------- shadow DOM host ----------
@@ -104,7 +105,9 @@ function start(site: SiteId, initialSettings: Settings) {
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
   const persist = () => { clearTimeout(saveTimer); saveTimer = setTimeout(() => chrome.storage.local.set({ [STATE_KEY]: state }), 250); };
   chrome.storage.local.get(STATE_KEY).then((r) => {
-    if (r[STATE_KEY]) state = { ...state, ...r[STATE_KEY], hidden: false, minimized: settings.general.startMinimized || !!r[STATE_KEY].minimized };
+    // supported boards are recognised automatically; the overlay opens on its own unless the user turned that off
+    if (r[STATE_KEY]) state = { ...state, ...r[STATE_KEY], hidden: !settings.board.autoOverlay, minimized: settings.general.startMinimized || !!r[STATE_KEY].minimized };
+    else state = { ...state, hidden: !settings.board.autoOverlay };
     applyState();
   });
   applyState();
@@ -142,7 +145,7 @@ function start(site: SiteId, initialSettings: Settings) {
 
   port.onMessage.addListener((msg) => {
     switch (msg?.type) {
-      case 'draw': arrows = msg.arrows ?? []; highlights = msg.highlights ?? []; drawLayer(); break;
+      case 'draw': arrows = msg.arrows ?? []; highlights = msg.highlights ?? []; evalBar = msg.evalBar ?? null; drawLayer(); break;
       case 'request-board': lastSent = ''; publishBoard(); send({ type: 'page', verdict: classifyPage(probe()) }); send({ type: 'overlay-visibility', visible: !state.hidden && !state.minimized }); break;
       case 'close': state.hidden = true; applyState(); persist(); break;
       case 'toggle-overlay': toggle(); break;
@@ -208,10 +211,35 @@ function start(site: SiteId, initialSettings: Settings) {
   const NS = 'http://www.w3.org/2000/svg';
   const drawLayer = () => {
     while (svg.firstChild) svg.removeChild(svg.firstChild);
-    if (!reading || !boardEl) return;
+    if (!reading || !boardEl) { host.removeAttribute('data-moth-layer'); return; }
     const size = Number(svg.getAttribute('width')) || boardEl.getBoundingClientRect().width;
     if (!size) return;
     const o = reading.orientation;
+    // best move: outline its start and destination squares
+    const best = arrows.find((a) => a.rank === 1);
+    if (best) for (const sq of [best.from, best.to]) {
+      const p = squareOrigin(sq, size, o);
+      const rect = document.createElementNS(NS, 'rect');
+      rect.setAttribute('x', String(p.x + 1.5)); rect.setAttribute('y', String(p.y + 1.5));
+      rect.setAttribute('width', String(size / 8 - 3)); rect.setAttribute('height', String(size / 8 - 3));
+      rect.setAttribute('fill', best.color); rect.setAttribute('fill-opacity', '0.18');
+      rect.setAttribute('stroke', best.color); rect.setAttribute('stroke-opacity', '0.8'); rect.setAttribute('stroke-width', '2');
+      svg.appendChild(rect);
+    }
+    // evaluation bar beside the board (White's winning chance), on the side of the board nearer White
+    if (evalBar) {
+      const w = Math.max(6, Math.round(size / 48)), x = -w - 4;
+      const whiteH = size * Math.max(0, Math.min(1, evalBar.white));
+      const bg = document.createElementNS(NS, 'rect');
+      bg.setAttribute('x', String(x)); bg.setAttribute('y', '0'); bg.setAttribute('width', String(w)); bg.setAttribute('height', String(size));
+      bg.setAttribute('rx', '3'); bg.setAttribute('fill', '#23202e'); bg.setAttribute('stroke', 'rgba(139,123,255,.6)');
+      svg.appendChild(bg);
+      const fg = document.createElementNS(NS, 'rect');
+      fg.setAttribute('x', String(x)); fg.setAttribute('width', String(w)); fg.setAttribute('height', String(whiteH)); fg.setAttribute('rx', '3');
+      fg.setAttribute('y', String(o === 'white' ? size - whiteH : 0)); fg.setAttribute('fill', '#eceaf6');
+      svg.appendChild(fg);
+      const t = document.createElementNS(NS, 'title'); t.textContent = `MOTH evaluation: ${evalBar.label}`; bg.appendChild(t);
+    }
     for (const h of highlights) {
       const p = squareOrigin(h.square, size, o);
       const rect = document.createElementNS(NS, 'rect');
@@ -227,6 +255,14 @@ function start(site: SiteId, initialSettings: Settings) {
       path.setAttribute('fill-opacity', String(a.opacity));
       svg.appendChild(path);
     }
+    // geometry for verification (tests, debugging): where each arrow starts/ends in viewport pixels
+    const br = boardEl.getBoundingClientRect();
+    host.setAttribute('data-moth-layer', JSON.stringify({
+      board: { x: Math.round(br.left * 10) / 10, y: Math.round(br.top * 10) / 10, size: Math.round(size * 10) / 10, orientation: o },
+      layer: { x: parseFloat(svg.style.left), y: parseFloat(svg.style.top) },
+      arrows: arrows.map((a) => { const f = squareCenter(a.from, size, o), t = squareCenter(a.to, size, o); return { from: a.from, to: a.to, rank: a.rank, x1: f.x + br.left, y1: f.y + br.top, x2: t.x + br.left, y2: t.y + br.top }; }),
+      evalBar: evalBar?.label ?? null,
+    }));
   };
 
   // ---------- fair-play watchdog ----------

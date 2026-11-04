@@ -3,11 +3,17 @@
 export type Theme = 'dark' | 'light' | 'system';
 export type Accent = 'violet' | 'indigo' | 'teal' | 'rose' | 'amber';
 export type DetailLevel = 'brief' | 'standard' | 'detailed';
+export type EngineChoice = 'moth' | 'stockfish';
+export type MothStyle = 'aggressive' | 'balanced' | 'defensive';
 
 export interface Settings {
   enabled: boolean;
   appearance: { theme: Theme; accent: Accent; overlayOpacity: number; overlayScale: number; animation: number };
-  engine: { depth: number; moveTimeMs: number; threads: number; hashMb: number; multiPv: number };
+  engine: { depth: number; moveTimeMs: number; threads: number; hashMb: number; multiPv: number; kind: EngineChoice; reviewKind: EngineChoice };
+  /** MOTH Engine: style shared by analysis, play and on-board suggestions; model = 'builtin' or idb:<id>. */
+  moth: { style: MothStyle; model: string; ownBook: boolean; moveTimeMs: number; learning: boolean; ponder: boolean };
+  /** On-board suggestions on supported analysis pages. */
+  board: { autoOverlay: boolean; autoAnalyse: boolean; compactPanel: boolean };
   visual: { arrows: boolean; arrowWidth: number; arrowOpacity: number; threatVision: boolean; squareHighlights: boolean; evalBar: boolean;
     threatLayers: { attacked: boolean; undefended: boolean; hanging: boolean; checks: boolean; pins: boolean; forks: boolean; skewers: boolean; kingSafety: boolean; defences: boolean } };
   intelligence: { detail: DetailLevel; autoSummary: boolean; coachingRecommendations: boolean };
@@ -18,7 +24,9 @@ export interface Settings {
 export const DEFAULT_SETTINGS: Settings = {
   enabled: true,
   appearance: { theme: 'dark', accent: 'violet', overlayOpacity: 0.97, overlayScale: 1, animation: 1 },
-  engine: { depth: 18, moveTimeMs: 0, threads: 1, hashMb: 64, multiPv: 3 },
+  engine: { depth: 18, moveTimeMs: 0, threads: 1, hashMb: 64, multiPv: 3, kind: 'moth', reviewKind: 'stockfish' },
+  moth: { style: 'balanced', model: 'builtin', ownBook: true, moveTimeMs: 100, learning: true, ponder: true },
+  board: { autoOverlay: true, autoAnalyse: true, compactPanel: true },
   visual: {
     arrows: true, arrowWidth: 1, arrowOpacity: 0.85, threatVision: false, squareHighlights: true, evalBar: true,
     threatLayers: { attacked: false, undefended: true, hanging: true, checks: true, pins: true, forks: true, skewers: true, kingSafety: true, defences: false },
@@ -41,6 +49,7 @@ export const LIMITS = {
   arrowWidth: [0.5, 2],
   arrowOpacity: [0.2, 1],
   reviewDepth: [8, 22],
+  mothMoveTime: [5, 5000],
 } as const;
 
 const clamp = (v: unknown, [lo, hi]: readonly [number, number], d: number) => {
@@ -56,7 +65,7 @@ const oneOf = <T extends string>(v: unknown, opts: readonly T[], d: T): T => (op
 export function validateSettings(raw: unknown): Settings {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, any>;
   const d = DEFAULT_SETTINGS;
-  const a = r.appearance ?? {}, e = r.engine ?? {}, v = r.visual ?? {}, i = r.intelligence ?? {}, g = r.general ?? {}, rv = r.review ?? {};
+  const a = r.appearance ?? {}, e = r.engine ?? {}, v = r.visual ?? {}, i = r.intelligence ?? {}, g = r.general ?? {}, rv = r.review ?? {}, mo = r.moth ?? {}, bo = r.board ?? {};
   const tl = v.threatLayers ?? {};
   return {
     enabled: bool(r.enabled, d.enabled),
@@ -73,6 +82,21 @@ export function validateSettings(raw: unknown): Settings {
       threads: int(e.threads, LIMITS.threads, d.engine.threads),
       hashMb: int(e.hashMb, LIMITS.hashMb, d.engine.hashMb),
       multiPv: int(e.multiPv, LIMITS.multiPv, d.engine.multiPv),
+      kind: oneOf(e.kind, ['moth', 'stockfish'] as const, d.engine.kind),
+      reviewKind: oneOf(e.reviewKind, ['moth', 'stockfish'] as const, d.engine.reviewKind),
+    },
+    moth: {
+      style: oneOf(mo.style, ['aggressive', 'balanced', 'defensive'] as const, d.moth.style),
+      model: typeof mo.model === 'string' && /^(builtin|classical|idb:[\w.-]+|file:[\w.-]+)$/.test(mo.model) ? mo.model : d.moth.model,
+      ownBook: bool(mo.ownBook, d.moth.ownBook),
+      moveTimeMs: int(mo.moveTimeMs, LIMITS.mothMoveTime, d.moth.moveTimeMs),
+      learning: bool(mo.learning, d.moth.learning),
+      ponder: bool(mo.ponder, d.moth.ponder),
+    },
+    board: {
+      autoOverlay: bool(bo.autoOverlay, d.board.autoOverlay),
+      autoAnalyse: bool(bo.autoAnalyse, d.board.autoAnalyse),
+      compactPanel: bool(bo.compactPanel, d.board.compactPanel),
     },
     visual: {
       arrows: bool(v.arrows, d.visual.arrows),

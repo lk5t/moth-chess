@@ -42,12 +42,18 @@ interface Search {
 }
 
 type Listener = (s: EngineStatus, detail?: string) => void;
+type StringListener = (text: string) => void;
 
+/**
+ * UCI engine controller. Originally written for Stockfish; MOTH Engine speaks the same protocol, so
+ * both engines share this lifecycle / queue / stale-result / recovery logic.
+ */
 export class StockfishEngine {
   private transport: EngineTransport | null = null;
   private ready: Promise<void> | null = null;
   private status: EngineStatus = 'idle';
   private listeners = new Set<Listener>();
+  private stringListeners = new Set<StringListener>();
   private lineWaiters: { test: (l: string) => boolean; resolve: () => void }[] = [];
   private current: Search | null = null;
   private pending: Search | null = null;
@@ -56,6 +62,7 @@ export class StockfishEngine {
   private stallTimer: ReturnType<typeof setTimeout> | null = null;
   private cache: LruCache<string, EngineResult>;
   private appliedMultiPv = -1;
+  private configDirty = false;
   private generation = 0; // bumps on every (re)start so lines from a dead transport are ignored
   engineName = 'Stockfish';
   options = new Map<string, UciOption>();
@@ -67,6 +74,9 @@ export class StockfishEngine {
   }
 
   getStatus() { return this.status; }
+  /** `info string …` lines (MOTH reports book moves, cache hits and move latency this way). */
+  onInfoString(l: StringListener) { this.stringListeners.add(l); return () => this.stringListeners.delete(l); }
+  private optionsTag() { return JSON.stringify(this.config.uci ?? {}); }
   onStatus(l: Listener) { this.listeners.add(l); l(this.status); return () => this.listeners.delete(l); }
   private setStatus(s: EngineStatus, detail?: string) {
     this.status = s;
@@ -121,11 +131,12 @@ export class StockfishEngine {
     const hash = Math.max(hs?.min ?? 1, Math.min(hs?.max ?? this.config.hashMb, this.config.hashMb));
     if (th) t.send(`setoption name Threads value ${threads}`);
     t.send(`setoption name Hash value ${hash}`);
+    for (const [k, v] of Object.entries(this.config.uci ?? {})) if (this.options.has(k)) t.send(`setoption name ${k} value ${v}`);
   }
 
   effectiveConfig(): EngineConfig {
     const th = this.options.get('Threads');
-    return { threads: Math.min(th?.max ?? this.config.threads, this.config.threads), hashMb: this.config.hashMb };
+    return { threads: Math.min(th?.max ?? this.config.threads, this.config.threads), hashMb: this.config.hashMb, uci: this.config.uci };
   }
 
   private waitFor(test: (l: string) => boolean): Promise<void> {
@@ -135,9 +146,11 @@ export class StockfishEngine {
   /** Update threads/hash. Applied immediately if idle, otherwise after the current search. */
   async configure(cfg: Partial<EngineConfig>) {
     const next = { ...this.config, ...cfg };
-    const changed = next.threads !== this.config.threads || next.hashMb !== this.config.hashMb;
+    const changed = next.threads !== this.config.threads || next.hashMb !== this.config.hashMb || JSON.stringify(next.uci ?? {}) !== JSON.stringify(this.config.uci ?? {});
     this.config = next;
-    if (!changed || !this.transport || this.status !== 'ready') return;
+    if (changed) this.cache.clear();
+    if (!changed || !this.transport || this.status !== 'ready') { if (changed) this.configDirty = true; return; }
+    this.configDirty = false;
     this.sendConfig(this.transport);
     this.transport.send('isready');
     await this.waitFor((l) => l === 'readyok');
@@ -150,7 +163,7 @@ export class StockfishEngine {
       return { searchId: id, result: Promise.reject(new Error(v.error ?? 'Invalid FEN')), cancel() {} };
     }
     const cfen = v.fen;
-    const cacheKey = `${positionKey(cfen)}|${opts.multiPv}`;
+    const cacheKey = `${positionKey(cfen)}|${opts.multiPv}|${this.optionsTag()}`;
     const hit = this.cache.get(cacheKey);
     if (hit && hit.depth >= opts.depth && hit.complete) {
       const r = { ...hit, searchId: id, fromCache: true, fen: cfen };
@@ -209,6 +222,7 @@ export class StockfishEngine {
     if (this.current !== s) return; // replaced while initialising
     if (s.stopped) { this.finish(s, false); this.current = null; this.startPending(); return; }
     const t = this.transport!;
+    if (this.configDirty) { this.configDirty = false; this.sendConfig(t); }
     if (this.appliedMultiPv !== s.opts.multiPv) {
       t.send(`setoption name MultiPV value ${s.opts.multiPv}`);
       this.appliedMultiPv = s.opts.multiPv;
@@ -223,6 +237,7 @@ export class StockfishEngine {
   private handleLine(line: string) {
     if (this.stallTimer) this.armStall();
     if (line.startsWith('id name ')) this.engineName = line.slice(8);
+    else if (line.startsWith('info string ')) { const txt = line.slice(12); this.stringListeners.forEach((l) => l(txt)); }
     else if (line.startsWith('option name ')) { const o = parseOption(line); if (o) this.options.set(o.name, o); }
     for (let i = 0; i < this.lineWaiters.length; i++) {
       if (this.lineWaiters[i].test(line)) {
@@ -268,7 +283,7 @@ export class StockfishEngine {
       this.clearStall();
       const complete = !s.stopped;
       const r = this.finish(s, complete, bm.bestMove ?? undefined, bm.ponder);
-      if (complete && r.lines.length) this.cache.set(`${positionKey(s.fen)}|${s.opts.multiPv}`, r);
+      if (complete && r.lines.length) this.cache.set(`${positionKey(s.fen)}|${s.opts.multiPv}|${this.optionsTag()}`, r);
       this.current = null;
       this.setStatus('ready');
       if (this.pending) this.startPending();

@@ -45,12 +45,26 @@ export function SettingsApp() {
             <Slider label="Animation intensity" value={s.appearance.animation} min={0} max={1} step={0.1} format={(v) => (v === 0 ? 'off' : `${Math.round(v * 100)}%`)} onChange={(v) => update({ appearance: { animation: v } })} />
           </Card>
           <Card title="Engine">
+            <Select label="Analysis engine" value={s.engine.kind} onChange={(v) => update({ engine: { kind: v } })} options={[{ value: 'moth', label: 'MOTH Engine (original)' }, { value: 'stockfish', label: 'Stockfish 17.1 lite' }]} />
+            <Select label="Game review / coach engine" value={s.engine.reviewKind} onChange={(v) => update({ engine: { reviewKind: v } })} options={[{ value: 'stockfish', label: 'Stockfish (stronger evaluations)' }, { value: 'moth', label: 'MOTH Engine' }]} />
             <Slider label="Search depth" value={s.engine.depth} min={LIMITS.depth[0]} max={LIMITS.depth[1]} onChange={(v) => update({ engine: { depth: v } })} />
             <Slider label="Thinking time limit" value={s.engine.moveTimeMs} min={0} max={30000} step={500} format={(v) => (v ? `${(v / 1000).toFixed(1)} s` : 'depth only')} onChange={(v) => update({ engine: { moveTimeMs: v } })} hint="Stops a search after this time even if the depth isn't reached." />
             <Slider label="Threads" value={s.engine.threads} min={LIMITS.threads[0]} max={LIMITS.threads[1]} onChange={(v) => update({ engine: { threads: v } })} hint="The bundled Stockfish lite build is single-threaded (it avoids SharedArrayBuffer, which overlay frames cannot use); higher values are clamped to what the engine reports." />
             <Slider label="Hash" value={s.engine.hashMb} min={LIMITS.hashMb[0]} max={LIMITS.hashMb[1]} step={16} format={(v) => `${v} MB`} onChange={(v) => update({ engine: { hashMb: v } })} />
             <Slider label="Lines (MultiPV)" value={s.engine.multiPv} min={1} max={5} onChange={(v) => update({ engine: { multiPv: v } })} />
             <Slider label="Game review depth" value={s.review.depth} min={LIMITS.reviewDepth[0]} max={LIMITS.reviewDepth[1]} onChange={(v) => update({ review: { depth: v } })} />
+          </Card>
+          <Card title="MOTH Engine">
+            <Select label="Playing style" value={s.moth.style} onChange={(v) => update({ moth: { style: v } })} options={[{ value: 'aggressive', label: 'Aggressive — initiative, gambits, sound sacrifices' }, { value: 'balanced', label: 'Balanced' }, { value: 'defensive', label: 'Defensive — king safety, solid structure' }]} />
+            <Slider label="Move response budget" value={s.moth.moveTimeMs} min={LIMITS.mothMoveTime[0]} max={1000} step={5} format={(v) => `${v} ms`} onChange={(v) => update({ moth: { moveTimeMs: v } })} hint="Deadline for move requests (on-board best move, play). Analysis keeps deepening." />
+            <Toggle checked={s.moth.ownBook} onChange={(v) => update({ moth: { ownBook: v } })} label="Use the opening book for moves" />
+            <Toggle checked={s.moth.ponder} onChange={(v) => update({ moth: { ponder: v } })} label="Ponder on your time (MOTH's own practice games only)" />
+            <Toggle checked={s.moth.learning} onChange={(v) => update({ moth: { learning: v } })} label="Learn from my practice games (personal adaptation)" />
+            <div className="small muted">Evaluation model: <span className="mono">{s.moth.model}</span> — manage models in the board page's MOTH Engine section.</div>
+          </Card>
+          <Card title="On-board suggestions">
+            <Toggle checked={s.board.autoOverlay} onChange={(v) => update({ board: { autoOverlay: v } })} label="Open MOTH automatically on supported analysis boards" />
+            <div className="small muted">Supported: Lichess analysis, studies and practice; Chess.com analysis — after you allow the site from the toolbar popup. Live, rated and puzzle pages are always excluded.</div>
           </Card>
           <Card title="Visual analysis">
             <Toggle label="Move arrows" checked={s.visual.arrows} onChange={(v) => update({ visual: { arrows: v } })} hint="Green = best, blue = 2nd, orange = 3rd line" />

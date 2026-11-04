@@ -66,7 +66,9 @@ export interface AnalysisOptions {
   moveTimeMs?: number; // 0/undefined = depth-limited only
 }
 
-export interface EngineConfig { threads: number; hashMb: number }
+export type EngineKind = 'stockfish' | 'moth';
+/** Engine configuration. `uci` carries engine-specific options (e.g. MOTH's Style) sent via setoption. */
+export interface EngineConfig { threads: number; hashMb: number; uci?: Record<string, string> }
 
 export interface Variation {
   id: string;

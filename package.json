@@ -1,8 +1,8 @@
 {
   "name": "moth-chess",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "MOTH Chess — local, fair-play-compliant chess analysis extension for Brave/Chromium (Manifest V3, Stockfish WASM).",
+  "description": "MOTH Chess \u2014 local, fair-play-compliant chess analysis extension for Brave/Chromium (Manifest V3, Stockfish WASM).",
   "license": "GPL-3.0-or-later",
   "type": "module",
   "scripts": {

@@ -17,6 +17,15 @@ jobs:
         with:
           node-version: 22
 
+      - name: MOTH Engine (C++ → WASM) compile check + perft
+        id: engine
+        continue-on-error: true
+        run: |
+          mkdir -p ci-logs
+          set -o pipefail
+          ( (command -v wasm-ld || sudo apt-get install -y lld >/dev/null) && clang --version | head -1 && sh engine/moth/build.sh /tmp/moth-ci.wasm \
+            && node --experimental-strip-types --no-warnings scripts/moth/perft.ts ) 2>&1 | tee ci-logs/engine.log
+
       - name: Install
         id: install
         run: |
@@ -58,6 +67,7 @@ jobs:
         run: |
           {
             echo "commit=${GITHUB_SHA}"
+            echo "engine=${{ steps.engine.outcome }}"
             echo "install=${{ steps.install.outcome }}"
             echo "typecheck=${{ steps.typecheck.outcome }}"
             echo "unit=${{ steps.unit.outcome }}"

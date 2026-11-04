@@ -67,7 +67,21 @@ export function AnalysisPanel() {
           <button className="btn" onClick={analysis.reanalyse} title="Clear cached results and analyse again">↻ Reanalyse</button>
           {surface === 'board' && <button className="btn ghost" onClick={async () => { const s = await savePosition(fen, { lastEval: top?.whiteScore }); toast(s.duplicate ? 'Position already in Memory' : 'Position saved to Memory'); }}>☆ Save position</button>}
           <span className="grow" />
-          <Tip tip={`${analysis.engineName}, local WASM. No server involved.`}><span className="badge neutral">local</span></Tip>
+          <Tip tip={`${analysis.engineName}, local WASM. No server involved.`}><span className="badge neutral" data-testid="engine-name">{analysis.engineName} · local</span></Tip>
+        </div>
+        <div className="row small" style={{ gap: 6, marginBottom: 6 }}>
+          <label className="row" style={{ gap: 4 }}><span className="muted">Engine</span>
+            <select className="input sm" aria-label="Analysis engine" value={settings.engine.kind} onChange={(e) => updateSettings({ engine: { kind: e.target.value as 'moth' | 'stockfish' } })}>
+              <option value="moth">MOTH Engine</option><option value="stockfish">Stockfish</option>
+            </select>
+          </label>
+          {settings.engine.kind === 'moth' && (
+            <label className="row" style={{ gap: 4 }}><span className="muted">Style</span>
+              <select className="input sm" aria-label="MOTH style" value={settings.moth.style} onChange={(e) => updateSettings({ moth: { style: e.target.value as 'aggressive' | 'balanced' | 'defensive' } })}>
+                <option value="aggressive">Aggressive</option><option value="balanced">Balanced</option><option value="defensive">Defensive</option>
+              </select>
+            </label>
+          )}
         </div>
         <Slider label="Depth" value={settings.engine.depth} min={1} max={30} onChange={(v) => updateSettings({ engine: { depth: v } })} />
         <Slider label="Lines (MultiPV)" value={settings.engine.multiPv} min={1} max={5} onChange={(v) => updateSettings({ engine: { multiPv: v } })} />

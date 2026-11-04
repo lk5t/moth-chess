@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppContext, type AppCtx, type TabId } from '@/components/AppContext';
 import { useSettings } from '@/settings/useSettings';
+import { formatScore } from '@/engine/normalize';
 import { useAnalysis, arrowsFromResult } from '@/components/useAnalysis';
 import { Tabs, EngineStatusBadge, Toggle, useThemeRoot } from '@/components/ui';
 import { AnalysisPanel } from '@/components/panels/AnalysisPanel';
@@ -47,7 +48,7 @@ export function OverlayApp() {
   }, []);
 
   const supported = verdict?.status === 'supported';
-  const composed = useMemo(() => (reading ? composeFen(reading, { turn: manualTurn, castling: manualCastling }) : { fen: null, problems: [] }), [reading, manualTurn, manualCastling]);
+  const composed = useMemo(() => (reading?.verified && reading.fullFen ? { fen: reading.fullFen, problems: [] as string[] } : reading ? composeFen(reading, { turn: manualTurn, castling: manualCastling }) : { fen: null, problems: [] as string[] }), [reading, manualTurn, manualCastling]);
   const fen = composed.fen && validateFen(composed.fen).ok ? validateFen(composed.fen).fen! : null;
   const fenError = composed.fen && !fen ? validateFen(composed.fen).error : null;
 
@@ -64,7 +65,9 @@ export function OverlayApp() {
     if (!portRef.current) return;
     if (!supported || !fen) { portRef.current.postMessage({ type: 'draw', arrows: [], highlights: [] }); return; }
     const layers = threatLayers(threats, settings.visual.threatLayers);
-    portRef.current.postMessage({ type: 'draw', arrows: [...arrowsFromResult(analysis.result, settings), ...layers.arrows], highlights: settings.visual.squareHighlights ? layers.highlights : [] });
+    const top = analysis.result?.lines[0]?.whiteScore;
+    const evalBar = settings.visual.evalBar && top ? { white: top.type === 'mate' ? (top.value > 0 || (top.value === 0 && top.winner === 'w') ? 1 : 0) : 1 / (1 + Math.pow(10, -top.value / 400)), label: formatScore(top) } : null;
+    portRef.current.postMessage({ type: 'draw', arrows: [...arrowsFromResult(analysis.result, settings), ...layers.arrows], highlights: settings.visual.squareHighlights ? layers.highlights : [], evalBar });
   }, [analysis.result, settings, threats, supported, fen]);
 
   const toast = useCallback((m: string) => { setToastMsg(m); setTimeout(() => setToastMsg(null), 3200); }, []);
@@ -88,7 +91,7 @@ export function OverlayApp() {
     tree, setTree, toast, openFull,
   };
 
-  const needTurn = reading && !reading.turn;
+  const needTurn = reading && !reading.verified && !reading.turn;
   return (
     <AppContext.Provider value={ctx}>
       <div className="stack" style={{ padding: 10, gap: 8, zoom: settings.appearance.overlayScale }}>
@@ -100,7 +103,28 @@ export function OverlayApp() {
           <button className="btn sm ghost" onClick={() => openFull({ fen: fen ?? undefined })} title="Open on the full MOTH board" aria-label="Open full board">⤢</button>
         </div>
         {!reading && <div className="banner">Looking for the analysis board on this page…</div>}
-        {reading && (needTurn || reading.castling === null) && (
+        {reading && (
+          <div className="row small wrap" style={{ gap: 6 }}>
+            <span className={`badge ${reading.verified ? 'good' : 'warn'}`} title={reading.verified ? 'Side to move, castling and en passant come from the page itself' : 'Only piece placement could be read'}>
+              {reading.verified ? `Verified position · ${reading.source === 'fen' ? 'page FEN' : reading.source === 'history' ? 'move list' : 'URL'}` : 'Unverified · pieces only'}
+            </span>
+            <label className="row small" style={{ gap: 4 }}>
+              <span className="muted">Engine</span>
+              <select className="input sm" aria-label="Engine" value={settings.engine.kind} onChange={(e) => updateSettings({ engine: { kind: e.target.value as 'moth' | 'stockfish' } })}>
+                <option value="moth">MOTH</option><option value="stockfish">Stockfish</option>
+              </select>
+            </label>
+            {settings.engine.kind === 'moth' && (
+              <label className="row small" style={{ gap: 4 }}>
+                <span className="muted">Style</span>
+                <select className="input sm" aria-label="Playing style" value={settings.moth.style} onChange={(e) => updateSettings({ moth: { style: e.target.value as 'aggressive' | 'balanced' | 'defensive' } })}>
+                  <option value="aggressive">Aggressive</option><option value="balanced">Balanced</option><option value="defensive">Defensive</option>
+                </select>
+              </label>
+            )}
+          </div>
+        )}
+        {reading && !reading.verified && (needTurn || reading.castling === null) && (
           <div className="card" style={{ padding: 8 }}>
             {needTurn && (
               <div className="row small" style={{ marginBottom: 4 }}>

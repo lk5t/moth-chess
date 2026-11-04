@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Arrow, EngineResult, EngineStatus, Square } from '@/types';
 import { getEngine } from '@/engine/worker-transport';
 import type { Settings } from '@/settings/schema';
+import type { EngineConfig } from '@/types';
 import { ARROW_COLORS } from '@/content/arrows/geometry';
 import { parseUci, validateFen } from '@/chess/position';
 
@@ -21,7 +22,8 @@ export interface AnalysisState {
  * `enabled` gates automatic analysis (e.g. off when the overlay is minimised, the tab is hidden, or the page is blocked).
  */
 export function useAnalysis(fen: string | null, settings: Settings, opts: { enabled?: boolean; depth?: number; multiPv?: number } = {}): AnalysisState {
-  const engine = getEngine({ threads: settings.engine.threads, hashMb: settings.engine.hashMb });
+  const cfg = engineConfigFor(settings);
+  const engine = getEngine(cfg, settings.engine.kind);
   const [result, setResult] = useState<EngineResult | null>(null);
   const [status, setStatus] = useState<EngineStatus>(engine.getStatus());
   const [detail, setDetail] = useState<string>();
@@ -35,7 +37,8 @@ export function useAnalysis(fen: string | null, settings: Settings, opts: { enab
     const off = engine.onStatus((s, d) => { setStatus(s); setDetail(d); });
     return () => { off(); };
   }, [engine]);
-  useEffect(() => { void engine.configure({ threads: settings.engine.threads, hashMb: settings.engine.hashMb }); }, [engine, settings.engine.threads, settings.engine.hashMb]);
+  const cfgKey = JSON.stringify(cfg);
+  useEffect(() => { void engine.configure(cfg); }, [engine, cfgKey]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     const on = () => setVisible(document.visibilityState === 'visible');
     document.addEventListener('visibilitychange', on);
@@ -79,4 +82,12 @@ export function arrowsFromResult(result: EngineResult | null, settings: Settings
     out.push({ from: u.from as Square, to: u.to as Square, color: ARROW_COLORS[i], width: settings.visual.arrowWidth * (i === 0 ? 1.15 : 0.9), opacity: settings.visual.arrowOpacity * (i === 0 ? 1 : 0.8), rank: i });
   });
   return out;
+}
+
+/** Engine configuration from settings. MOTH receives its style / model; Stockfish ignores unknown options. */
+export function engineConfigFor(settings: Settings): EngineConfig {
+  const base = { threads: settings.engine.threads, hashMb: Math.min(settings.engine.hashMb, settings.engine.kind === 'moth' ? 128 : 512) };
+  if (settings.engine.kind !== 'moth') return base;
+  const style = settings.moth.style[0].toUpperCase() + settings.moth.style.slice(1);
+  return { ...base, uci: { Style: style, EvalFile: settings.moth.model, OwnBook: 'false' } };
 }

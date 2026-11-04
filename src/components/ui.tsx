@@ -128,6 +128,8 @@ export function useThemeRoot(s: Settings) {
 }
 
 export const Icon = {
+  play: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M9 20h8M10 17h6l-1-5 2-3-3-1V5h-2v2l-3 1 2 3z" /><circle cx="12" cy="4" r="1" /></svg>,
+  engine: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 3c-2 3-6 4-6 9a6 6 0 0012 0c0-5-4-6-6-9z" /><path d="M9 14c1 1.5 5 1.5 6 0" /></svg>,
   board: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="3" width="18" height="18" rx="3" /><path d="M3 9h18M3 15h18M9 3v18M15 3v18" /></svg>,
   brain: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="6" cy="7" r="2" /><circle cx="18" cy="7" r="2" /><circle cx="12" cy="17" r="2" /><circle cx="12" cy="9" r="1.5" /><path d="M7.7 8l2.9.6M16.3 8l-2.9.6M12 10.5V15M7 9l4 6.5M17 9l-4 6.5" /></svg>,
   map: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="5" cy="12" r="2" /><circle cx="17" cy="5" r="2" /><circle cx="17" cy="12" r="2" /><circle cx="17" cy="19" r="2" /><path d="M7 12h8M7 11l8-5M7 13l8 5" /></svg>,

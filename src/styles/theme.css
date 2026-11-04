@@ -235,3 +235,9 @@ a { color: var(--accent); }
 table.t { width: 100%; border-collapse: collapse; font-size: 12px; }
 table.t th { text-align: left; color: var(--muted); font-weight: 600; padding: 5px 6px; border-bottom: 1px solid var(--line); }
 table.t td { padding: 5px 6px; border-bottom: 1px solid var(--line); }
+
+/* MOTH Engine: learning dashboard + play */
+.grid-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px 14px; }
+.clock { font-size: 20px; font-weight: 700; padding: 2px 10px; border-radius: 8px; background: var(--panel-2, rgba(255,255,255,.04)); border: 1px solid var(--line); min-width: 74px; text-align: right; }
+.clock.running { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 0 14px color-mix(in srgb, var(--accent) 35%, transparent); }
+@media (max-width: 900px) { .play-view { grid-template-columns: 1fr !important; } }

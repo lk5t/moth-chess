@@ -4,6 +4,7 @@
 // if the site doesn't expose them, they are reported as unknown and the user can set them.
 import type { Color, Orientation, PieceType, Square } from '@/types';
 import type { SiteId } from '../detector/sites';
+import { applyMove, START_FEN, validateFen } from '@/chess/position';
 
 export interface BoardReading {
   site: SiteId;
@@ -13,7 +14,12 @@ export interface BoardReading {
   castling: string | null; // null = unknown
   ep: string | null; // null = unknown
   lastMove?: [Square, Square];
-  source: 'url' | 'dom';
+  /** where the full position came from: the site's own FEN field, its move list replayed legally, the URL, or pieces only */
+  source: 'fen' | 'history' | 'url' | 'dom';
+  /** true when side to move, castling and e.p. are known from page data (not just piece placement) */
+  verified: boolean;
+  /** complete, validated FEN when verified */
+  fullFen?: string;
   warnings: string[];
 }
 
@@ -74,6 +80,38 @@ export function fenFromLichessPath(pathname: string): string | null {
   return /^[pnbrqkPNBRQK1-8/]+ [wb]( [KQkq-]+)?( [a-h1-8-]+)?/.test(fen) ? fen : null;
 }
 
+// ---------------- position verification from page data ----------------
+
+/** Replay SAN tokens from the start position; null if any move is illegal. */
+export function replaySans(sans: string[], startFen = START_FEN): string | null {
+  let fen = startFen;
+  for (const raw of sans) {
+    const san = raw.replace(/[!?]+$/, '').replace(/^\d+\.+/, '').trim();
+    if (!san) continue;
+    const r = applyMove(fen, san);
+    if (!r) return null;
+    fen = r.fenAfter;
+  }
+  return fen;
+}
+
+/**
+ * Upgrade a pieces-only reading to a verified position using page data, but only when that data
+ * reproduces exactly the placement visible on the board. Anything else stays unverified.
+ */
+export function verifyReading(r: BoardReading, page: { fen?: string | null; sans?: string[] | null }): BoardReading {
+  const tryFen = (fen: string | null | undefined, source: BoardReading['source']): BoardReading | null => {
+    if (!fen) return null;
+    const v = validateFen(fen);
+    if (!v.ok || !v.fen || v.fen.split(' ')[0] !== r.placement) return null;
+    const [, t, c, e] = v.fen.split(' ');
+    return { ...r, turn: t as Color, castling: c, ep: e, source, verified: true, fullFen: v.fen, warnings: r.warnings.filter((w) => !/Castling|Side to move/.test(w)) };
+  };
+  return tryFen(page.fen, 'fen') ?? (page.sans?.length ? tryFen(replaySans(page.sans), 'history') : null) ?? (r.placement === START_PLACEMENT && !page.sans?.length ? tryFen(START_FEN, 'history') : null) ?? r;
+}
+
+const moveText = (el: Element) => (el.textContent ?? '').replace(/\s+/g, '').replace(/[^\w=+#-]/g, '');
+
 // ---------------- Lichess (chessground) ----------------
 
 function translateOf(el: Element): { x: number; y: number } | null {
@@ -132,12 +170,21 @@ export const lichessAdapter: BoardAdapter = {
     const urlFen = fenFromLichessPath(loc.pathname);
     if (urlFen && urlFen.split(' ')[0] === placement) {
       const [, t, c = '-', e = '-'] = urlFen.split(' ');
-      return { site: 'lichess', placement, orientation, turn: t as Color, castling: c, ep: e, lastMove, source: 'url', warnings };
+      const v = validateFen(`${urlFen.split(' ').slice(0, 4).join(' ')} 0 1`);
+      if (v.ok && v.fen) return { site: 'lichess', placement, orientation, turn: t as Color, castling: c, ep: e, lastMove, source: 'url', verified: true, fullFen: v.fen, warnings };
     }
     const turn = turnFromLastMove(placement, lastMove);
     if (!turn) warnings.push('Side to move could not be read from the page — choose it in the overlay.');
     warnings.push('Castling and en-passant rights are not exposed by the page; set them in the overlay if they matter.');
-    return { site: 'lichess', placement, orientation, turn, castling: null, ep: null, lastMove, source: 'dom', warnings };
+    const base: BoardReading = { site: 'lichess', placement, orientation, turn, castling: null, ep: null, lastMove, source: 'dom', verified: false, warnings };
+    // the analysis page shows the current FEN in a copyable field and the move tree up to the active move
+    const fenField = [..._doc.querySelectorAll<HTMLInputElement>('.copyables input, input.copyable, .analyse__underboard input[spellcheck="false"]')].map((i) => i.value).find((v) => validateFen(v).ok);
+    const tree = [..._doc.querySelectorAll('.tview2 move, .analyse__moves move')];
+    const activeIdx = tree.findIndex((m) => m.classList.contains('active'));
+    const mainline = tree.filter((m) => !m.closest('lines, interrupt, .inline'));
+    const upto = activeIdx >= 0 && mainline.includes(tree[activeIdx]) ? mainline.slice(0, mainline.indexOf(tree[activeIdx]) + 1) : mainline;
+    const sans = upto.map((m) => moveText(m.querySelector('san') ?? m)).filter(Boolean);
+    return verifyReading(base, { fen: fenField, sans });
   },
 };
 
@@ -172,7 +219,18 @@ export const chesscomAdapter: BoardAdapter = {
     const warnings: string[] = [];
     if (!turn) warnings.push('Side to move could not be read from the page — choose it in the overlay.');
     warnings.push('Castling and en-passant rights are not exposed by the page; set them in the overlay if they matter.');
-    return { site: 'chesscom', placement, orientation, turn, castling: null, ep: null, lastMove, source: 'dom', warnings };
+    const base: BoardReading = { site: 'chesscom', placement, orientation, turn, castling: null, ep: null, lastMove, source: 'dom', verified: false, warnings };
+    // the analysis move list: replay up to the selected node; verified only if it reproduces the board
+    const doc = board.ownerDocument;
+    const nodes = [...doc.querySelectorAll('wc-simple-move-list .node, .move-list .node, .analysis-view-movelist .node')].filter((n) => !n.closest('.subline, .variation'));
+    const sel = nodes.findIndex((n) => n.classList.contains('selected') || n.querySelector('.selected'));
+    const upto = sel >= 0 ? nodes.slice(0, sel + 1) : nodes;
+    const sans = upto.map((n) => {
+      const c = n.querySelector('.node-highlight-content') ?? n;
+      const fig = c.querySelector('[data-figurine]')?.getAttribute('data-figurine') ?? '';
+      return fig + moveText(c);
+    }).filter(Boolean);
+    return verifyReading(base, { sans });
   },
 };
 

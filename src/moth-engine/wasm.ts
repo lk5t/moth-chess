@@ -15,6 +15,7 @@ export interface MothExports {
   mc_uci_to_san(): number;
   mc_san_to_uci(): number;
   mc_side(): number;
+  mc_quiet(): number;
   mc_in_check(): number;
   mc_game_state(): number;
   mc_key_lo(): number;
@@ -72,7 +73,7 @@ export class MothWasm {
   readonly MATE_BOUND: number;
   private io: number;
 
-  private constructor(instance: WebAssembly.Instance, hashMb: number) {
+  constructor(instance: WebAssembly.Instance, hashMb: number) {
     this.x = instance.exports as unknown as MothExports;
     this.x.mc_init(hashMb);
     this.io = this.x.mc_io();
@@ -103,9 +104,35 @@ export class MothWasm {
   fen(): string { return this.read(this.x.mc_get_fen()); }
   legalMoves(): string[] { this.x.mc_legal_uci(); const s = this.readZ(); return s ? s.trim().split(' ') : []; }
   uciToSan(uci: string): string | null { this.write(uci); const n = this.x.mc_uci_to_san(); return n ? this.read(n) : null; }
-  sanToUci(san: string): string | null { this.write(san); const n = this.x.mc_san_to_uci(); return n ? this.read(n) : null; }
+  sanToUci(san: string): string | null {
+    this.write(san);
+    const n = this.x.mc_san_to_uci();
+    if (n) return this.read(n);
+    return this.sanFallback(san);
+  }
+
+  /**
+   * Tolerant SAN resolution for over-disambiguated notation (some generators disambiguate against
+   * pinned pieces, e.g. "Ndb5" when the other knight is pinned). Accepts only a unique legal match.
+   */
+  private sanFallback(san: string): string | null {
+    const m = /^([NBRQK])?([a-h])?([1-8])?x?([a-h][1-8])(?:=?([NBRQ]))?/.exec(san.replace(/[+#!?]/g, ''));
+    if (!m) return null;
+    const [, piece = 'P', df, dr, dest, promo] = m;
+    const board = this.fen().split(' ')[0].split('/');
+    const at = (sq: string) => {
+      let c = 0;
+      for (const ch of board[8 - Number(sq[1])]) { if (/\d/.test(ch)) { c += Number(ch); continue; } if (c === sq.charCodeAt(0) - 97) return ch.toUpperCase(); c++; }
+      return '';
+    };
+    const cands = this.legalMoves().filter((u) =>
+      u.slice(2, 4) === dest && at(u.slice(0, 2)) === piece && (!df || u[0] === df) && (!dr || u[1] === dr) && (promo ? u[4] === promo.toLowerCase() : u.length === 4));
+    return cands.length === 1 ? cands[0] : null;
+  }
   sideToMove(): 'w' | 'b' { return this.x.mc_side() === 0 ? 'w' : 'b'; }
   inCheck(): boolean { return this.x.mc_in_check() === 1; }
+  /** Not in check and no material-winning capture/promotion available (training-data filter). */
+  isQuiet(): boolean { return this.x.mc_quiet() === 1; }
   gameState(): GameState { return STATES[this.x.mc_game_state()] ?? 'ongoing'; }
   /** 64-bit Zobrist key as a 16-char hex string. */
   key(): string { return (this.x.mc_key_hi() >>> 0).toString(16).padStart(8, '0') + (this.x.mc_key_lo() >>> 0).toString(16).padStart(8, '0'); }

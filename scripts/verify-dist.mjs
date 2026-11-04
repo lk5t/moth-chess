@@ -14,7 +14,15 @@ need(m.background?.service_worker ?? 'background.js');
 need(m.action?.default_popup ?? 'popup.html');
 need(m.options_page ?? 'options.html');
 for (const s of Object.values(m.icons ?? {})) need(s);
-['board.html', 'overlay.html', 'content.js', 'engines/stockfish.js', 'engines/stockfish.wasm'].forEach(need);
+['board.html', 'overlay.html', 'content.js', 'engines/stockfish.js', 'engines/stockfish.wasm',
+  'moth-worker.js', 'moth-train-worker.js', 'moth-engine/moth.wasm', 'moth-engine/book.json', 'moth-engine/tactics.json', 'moth-engine/models/registry.json'].forEach(need);
+if (existsSync(resolve(dist, 'moth-engine/models/registry.json'))) {
+  const reg = JSON.parse(readFileSync(resolve(dist, 'moth-engine/models/registry.json'), 'utf8'));
+  for (const mdl of reg.models ?? []) need(`moth-engine/models/${mdl.file}`);
+  if (reg.active && !(reg.models ?? []).some((x) => x.id === reg.active)) errors.push(`registry active model ${reg.active} is not listed`);
+}
+if (existsSync(resolve(dist, 'moth-worker.js')) && /\bimport\s*\(|^import\s/m.test(readFileSync(resolve(dist, 'moth-worker.js'), 'utf8')))
+  errors.push('moth-worker.js must be a classic worker script (no imports)');
 const csp = m.content_security_policy?.extension_pages ?? '';
 if (!csp.includes("'wasm-unsafe-eval'")) errors.push("extension_pages CSP lacks 'wasm-unsafe-eval' (needed for Stockfish WASM)");
 if (/https?:\/\//.test(csp)) errors.push('CSP must not allow remote script origins');

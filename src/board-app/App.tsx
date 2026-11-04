@@ -17,6 +17,8 @@ import { OpeningsPanel } from '@/components/panels/OpeningsPanel';
 import { CoachPanel } from '@/components/panels/CoachPanel';
 import { MemoryPanel } from '@/components/panels/MemoryPanel';
 import { DashboardPanel } from '@/components/panels/DashboardPanel';
+import { LearningPanel } from '@/components/panels/LearningPanel';
+import { PlayView } from '@/play/PlayView';
 import { analyseThreats } from '@/threat-vision/threats';
 import { threatLayers } from '@/threat-vision/layers';
 import { START_FEN, validateFen } from '@/chess/position';
@@ -34,6 +36,8 @@ const NAV: { id: TabId; label: string; icon: ReactNode }[] = [
   { id: 'coach', label: 'MOTH Coach', icon: Icon.coach },
   { id: 'memory', label: 'Memory', icon: Icon.memory },
   { id: 'dashboard', label: 'Dashboard', icon: Icon.chart },
+  { id: 'play', label: 'Play MOTH', icon: Icon.play },
+  { id: 'engine', label: 'MOTH Engine', icon: Icon.engine },
 ];
 
 export function BoardApp() {
@@ -111,6 +115,8 @@ export function BoardApp() {
       case 'coach': return <CoachPanel />;
       case 'memory': return <MemoryPanel />;
       case 'dashboard': return <DashboardPanel />;
+      case 'engine': return <LearningPanel />;
+      case 'play': return null;
     }
   })();
 
@@ -126,6 +132,12 @@ export function BoardApp() {
           <span className="spacer" />
           <button onClick={() => (typeof chrome !== 'undefined' && chrome.runtime?.openOptionsPage ? chrome.runtime.openOptionsPage() : open('options.html'))} title="Settings" aria-label="Settings">{Icon.gear}</button>
         </nav>
+        {tab === 'play' ? (
+          <main className="main" style={{ display: 'block' }}>
+            <div className="page-head" style={{ marginBottom: 12 }}><h1>MOTH Chess</h1><span className="badge">Play MOTH</span></div>
+            <PlayView />
+          </main>
+        ) : (
         <main className={`main ${tab === 'dashboard' || tab === 'memory' ? '' : ''}`}>
           <div className="stack" style={{ position: 'sticky', top: 16 }}>
             <div className="page-head">
@@ -136,7 +148,7 @@ export function BoardApp() {
             </div>
             {welcome && (
               <div className="banner good">
-                <b>Welcome to MOTH Chess.</b> Everything runs locally with Stockfish WASM. Use this board for analysis, reviews and training; to use the overlay on Lichess or Chess.com analysis boards, grant access from the toolbar popup. MOTH never runs during live games.
+                <b>Welcome to MOTH Chess.</b> Everything runs locally — MOTH Engine and Stockfish, both WebAssembly. Use this board for analysis, reviews and training; to use the overlay on Lichess or Chess.com analysis boards, grant access from the toolbar popup. MOTH never runs during live games.
                 <button className="btn sm ghost" style={{ marginLeft: 8 }} onClick={() => setWelcome(false)}>Dismiss</button>
               </div>
             )}
@@ -178,6 +190,7 @@ export function BoardApp() {
           </div>
           <div className="stack" style={{ minWidth: 0 }}>{panel}</div>
         </main>
+        )}
       </div>
       <div style={{ position: 'fixed', bottom: 16, left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', gap: 6, zIndex: 50 }} aria-live="polite">
         {toasts.map((t) => <div key={t.id} className="card glow small" style={{ padding: '8px 12px', boxShadow: 'var(--shadow)' }}>{t.msg}</div>)}

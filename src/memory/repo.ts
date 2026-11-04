@@ -202,10 +202,13 @@ export async function recentItems(limit = 12): Promise<RecentItem[]> {
 export const EXPORT_FORMAT = 'moth-chess-export';
 export const EXPORT_VERSION = 2;
 
-export async function exportAll(tables: readonly TableName[] = TABLES): Promise<string> {
+/** Binary model weights are exported as .mothnn files from the Learning Lab, not inside the JSON backup. */
+export const JSON_EXPORT_TABLES = TABLES.filter((t) => t !== 'models');
+
+export async function exportAll(tables: readonly TableName[] = JSON_EXPORT_TABLES): Promise<string> {
   const d = db();
   const data: Record<string, unknown[]> = {};
-  for (const t of tables) data[t] = await (d as any)[t].toArray();
+  for (const t of tables) { if (t === 'models') continue; data[t] = await (d as any)[t].toArray(); }
   return JSON.stringify({ format: EXPORT_FORMAT, version: EXPORT_VERSION, exportedAt: new Date().toISOString(), data }, null, 1);
 }
 
