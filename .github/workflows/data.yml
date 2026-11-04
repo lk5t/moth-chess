@@ -1,0 +1,44 @@
+name: Data
+
+# One-off / manual: samples the Lichess open database (CC0) into small training files on the `data` branch.
+on:
+  push:
+    branches: [main]
+    paths: ['scripts/data/**', '.github/workflows/data.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sample:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Lichess database files (CC0)
+        run: |
+          sudo apt-get install -y zstd >/dev/null
+          mkdir -p raw out
+          curl -sSfL -o raw/games.pgn.zst https://database.lichess.org/standard/lichess_db_standard_rated_2014-06.pgn.zst
+          curl -sSfL -o raw/puzzles.csv.zst https://database.lichess.org/lichess_db_puzzle.csv.zst
+          ls -la raw
+      - name: Sample games
+        run: |
+          zstd -dc raw/games.pgn.zst | head -c 1500000000 > raw/games.pgn || true
+          python3 scripts/data/sample_lichess.py games raw/games.pgn out/lichess-games.pgn.gz 24000
+      - name: Sample puzzles
+        run: |
+          zstd -dc raw/puzzles.csv.zst > raw/puzzles.csv
+          python3 scripts/data/sample_lichess.py puzzles raw/puzzles.csv out/lichess-puzzles.csv.gz 250
+      - name: Publish to data branch
+        run: |
+          cd out
+          cat > SOURCES.md <<'MD'
+          Sampled from the Lichess open database (https://database.lichess.org), released under CC0 1.0.
+          - lichess-games.pgn.gz: rated standard games, June 2014, both players >= 1800, normal termination, no bullet.
+          - lichess-puzzles.csv.gz: Lichess puzzle database, up to 250 puzzles per tactical theme (plays >= 200, popularity >= 80).
+          MD
+          git init -q -b data
+          git config user.name moth-ci; git config user.email moth-ci@users.noreply.github.com
+          git add -A; git commit -qm "Lichess CC0 samples"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" data
